@@ -3,7 +3,7 @@ import { Message } from '@/types/lead';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Robot } from 'lucide-react';
+import { Bot } from 'lucide-react';
 
 interface ChatMessageProps {
   message: Message;
@@ -39,7 +39,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           {message.content}
           {isAutomated && (
             <div className="flex items-center mt-1 text-xs text-gray-500">
-              <Robot className="h-3 w-3 mr-1" />
+              <Bot className="h-3 w-3 mr-1" />
               <span>Resposta automática</span>
             </div>
           )}
