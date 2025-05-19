@@ -423,6 +423,7 @@ export type Database = {
           id: number
           senha: string | null
           updated_at: string | null
+          user: string | null
         }
         Insert: {
           company_name?: string | null
@@ -431,6 +432,7 @@ export type Database = {
           id?: number
           senha?: string | null
           updated_at?: string | null
+          user?: string | null
         }
         Update: {
           company_name?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           id?: number
           senha?: string | null
           updated_at?: string | null
+          user?: string | null
         }
         Relationships: []
       }

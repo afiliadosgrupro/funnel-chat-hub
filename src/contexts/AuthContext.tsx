@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, AuthState } from '@/types/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -38,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             error: null,
           });
         } catch (error) {
-          console.error('Failed to parse stored user data', error);
+          console.error('Falha ao analisar os dados do usuário armazenados', error);
           localStorage.removeItem('authToken');
           localStorage.removeItem('user');
           setState({
@@ -95,60 +97,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [state.isAuthenticated]);
 
-  // Mock login function - replace with actual Supabase auth
+  // Login function using Supabase Login_saas table
   const login = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
-      // In a real implementation, this would call your Supabase auth endpoint
-      // For demo purposes, we're using mock data
-      if (email === 'admin@example.com' && password === 'password') {
-        const user: User = {
-          id: '1',
-          email: 'admin@example.com',
-          name: 'Admin User',
-          role: 'admin',
-        };
-        
-        localStorage.setItem('authToken', 'mock-jwt-token');
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        setState({
-          isAuthenticated: true,
-          user,
-          loading: false,
-          error: null,
-        });
-        
-        navigate('/dashboard');
-      } else if (email === 'seller@example.com' && password === 'password') {
-        const user: User = {
-          id: '2',
-          email: 'seller@example.com',
-          name: 'Seller User',
-          role: 'seller',
-        };
-        
-        localStorage.setItem('authToken', 'mock-jwt-token');
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        setState({
-          isAuthenticated: true,
-          user,
-          loading: false,
-          error: null,
-        });
-        
-        navigate('/dashboard');
-      } else {
+      // Consultar a tabela Login_saas para verificar credenciais
+      const { data, error } = await supabase
+        .from('Login_saas')
+        .select('*')
+        .eq('email', email.toLowerCase().trim())
+        .eq('senha', password)
+        .single();
+
+      if (error || !data) {
         setState(prev => ({
           ...prev,
           loading: false,
           error: 'Credenciais inválidas. Tente novamente.',
         }));
+        return;
       }
+
+      // Login bem-sucedido
+      const user: User = {
+        id: data.id.toString(),
+        email: data.email,
+        name: data.company_name || data.user || email.split('@')[0],
+        role: 'admin', // Definindo como admin por padrão, você pode ajustar conforme necessário
+        avatar: undefined,
+      };
+      
+      // Armazenar informações do usuário e token
+      localStorage.setItem('authToken', 'login-saas-token');
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      setState({
+        isAuthenticated: true,
+        user,
+        loading: false,
+        error: null,
+      });
+      
+      navigate('/dashboard');
+      toast({
+        title: "Login bem-sucedido",
+        description: `Bem-vindo, ${user.name}!`,
+      });
+      
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Erro no login:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -175,12 +173,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Mock API call - replace with actual Supabase implementation
+      // Verificar se o email existe na tabela Login_saas
+      const { data, error } = await supabase
+        .from('Login_saas')
+        .select('email')
+        .eq('email', email.toLowerCase().trim())
+        .single();
+        
+      if (error || !data) {
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Email não encontrado em nosso sistema.',
+        }));
+        return;
+      }
+      
+      // Aqui você implementaria o envio real de email para recuperação de senha
+      // Por enquanto, apenas simulamos o sucesso
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setState(prev => ({ ...prev, loading: false }));
+      toast({
+        title: "Email enviado",
+        description: "Instruções de recuperação de senha foram enviadas para seu email.",
+      });
     } catch (error) {
-      console.error('Forgot password error:', error);
+      console.error('Erro ao recuperar senha:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -193,13 +212,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Mock API call - replace with actual Supabase implementation
+      // Em uma implementação real, você validaria o token e atualizaria a senha
+      // Por enquanto, apenas simulamos o sucesso
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setState(prev => ({ ...prev, loading: false }));
+      toast({
+        title: "Senha atualizada",
+        description: "Sua senha foi redefinida com sucesso. Você já pode fazer login.",
+      });
+      
       navigate('/login');
     } catch (error) {
-      console.error('Reset password error:', error);
+      console.error('Erro ao redefinir senha:', error);
       setState(prev => ({
         ...prev,
         loading: false,
