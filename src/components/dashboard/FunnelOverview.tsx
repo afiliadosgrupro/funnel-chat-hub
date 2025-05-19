@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Search, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 interface Conversation {
   id: string;
@@ -29,7 +30,7 @@ const stageBadgeColors = {
 };
 
 const FunnelOverview = () => {
-  const { updateFilters, filters, setSelectedLeadId } = useLeads();
+  const { updateFilters, filters, setSelectedLeadId, selectedLeadId } = useLeads();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,6 +83,7 @@ const FunnelOverview = () => {
       setConversations(conversations);
     } catch (err) {
       console.error('Erro ao buscar conversas:', err);
+      toast.error('Erro ao carregar conversas');
     } finally {
       setLoading(false);
     }
@@ -110,6 +112,11 @@ const FunnelOverview = () => {
   
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+  };
+  
+  const handleSelectLead = (leadId: string) => {
+    console.log('Selecionando lead:', leadId);
+    setSelectedLeadId(leadId);
   };
   
   return (
@@ -157,8 +164,11 @@ const FunnelOverview = () => {
             {filteredConversations.map((conv) => (
               <li 
                 key={conv.id}
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => setSelectedLeadId(conv.id)}
+                className={cn(
+                  "hover:bg-gray-50 cursor-pointer", 
+                  selectedLeadId === conv.id ? "bg-gray-100" : ""
+                )}
+                onClick={() => handleSelectLead(conv.id)}
               >
                 <div className="px-4 py-3">
                   <div className="flex justify-between">

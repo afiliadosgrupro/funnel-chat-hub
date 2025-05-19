@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Lead, Message, FunnelStage } from '@/types/lead';
 import { useAuth } from './AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Sample mock data
 const MOCK_LEADS: Lead[] = [
@@ -281,17 +283,95 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     messages: false,
   });
 
-  const selectedLead = leads.find(lead => lead.id === selectedLeadId) || null;
+  // This function will convert data from Março | FUNIL Bruno to our Lead type
+  const convertToLead = (funnelData: any, cadastroData: any = {}): Lead => {
+    // Map the funil value to our FunnelStage type
+    const stageMappings: Record<string, FunnelStage> = {
+      'Apresentação': 'initial',
+      'Identificação': 'identification',
+      'Conscientização': 'awareness',
+      'Validação': 'validation',
+      'Negociação': 'negotiation',
+      'Objeção': 'objection',
+      'Compra': 'purchase'
+    };
+    
+    const stage = stageMappings[funnelData.funil] || 'initial';
+    
+    return {
+      id: funnelData.id,
+      name: cadastroData.name || 'Sem nome',
+      phone: cadastroData.phone || funnelData.phone || '',
+      stage: stage,
+      stageUpdatedAt: funnelData.created_at || new Date().toISOString(),
+      assignedTo: funnelData.vendedor || null,
+      isHot: stage === 'negotiation' || stage === 'objection',
+      lastMessageAt: funnelData.ULTIMA_INTERACAO_CLIENTE || funnelData.created_at || new Date().toISOString(),
+      lastMessage: funnelData.HISTORICO_CONVERSA ? 
+        funnelData.HISTORICO_CONVERSA.split('\n').slice(-1)[0] || 'Nova conversa' : 
+        'Nova conversa',
+      symptoms: funnelData['Sintomas Extração'] ? 
+        funnelData['Sintomas Extração'].split(',').map((s: string) => s.trim()) : 
+        [],
+      problemDuration: funnelData['Tempo problema Extração'] || '',
+      attemptsToSolve: funnelData['Medicamentos Extração'] ? 
+        funnelData['Medicamentos Extração'].split(',').map((s: string) => s.trim()) : 
+        [],
+      isActive: true,
+      isAutomationPaused: funnelData['Time_is_active'] === false
+    };
+  };
 
-  // Initial load of leads
+  // Convert a message from Março | Menssagem Bruno to our Message type
+  const convertToMessage = (msgData: any): Message => {
+    return {
+      id: msgData.id.toString(),
+      leadId: msgData.conversation_id,
+      content: msgData.message_content || '',
+      sentAt: msgData.created_at,
+      isFromLead: msgData.status === 'received',
+      isAutomated: msgData.vendedor === 'AI',
+      sentBy: msgData.vendedor !== 'AI' ? msgData.vendedor : undefined
+    };
+  };
+
+  // Initial load of leads using Supabase
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        // Replace with actual API call to Supabase
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-        setLeads(MOCK_LEADS);
+        setLoading(prev => ({ ...prev, leads: true }));
+        
+        // Fetch data from Março | FUNIL Bruno
+        const { data: funnelData, error: funnelError } = await supabase
+          .from('Março | FUNIL Bruno')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (funnelError) throw funnelError;
+        
+        // Fetch user data from Março | Cadastro Bruno
+        const { data: cadastroData, error: cadastroError } = await supabase
+          .from('Março | Cadastro Bruno')
+          .select('*');
+        
+        if (cadastroError) throw cadastroError;
+        
+        // Create a map of cadastro data by ID for quick lookup
+        const cadastroMap = new Map();
+        cadastroData.forEach((item: any) => {
+          cadastroMap.set(item.id, item);
+        });
+        
+        // Convert the data to our Lead format
+        const leadsList: Lead[] = funnelData.map((funnel: any) => {
+          const cadastro = cadastroMap.get(funnel.id);
+          return convertToLead(funnel, cadastro);
+        });
+        
+        setLeads(leadsList);
       } catch (error) {
         console.error('Error fetching leads:', error);
+        toast.error('Erro ao buscar leads');
       } finally {
         setLoading(prev => ({ ...prev, leads: false }));
       }
@@ -300,7 +380,7 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchLeads();
   }, []);
 
-  // Load messages when a lead is selected
+  // Load messages when a lead is selected using Supabase
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedLeadId) return;
@@ -308,13 +388,23 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         setLoading(prev => ({ ...prev, messages: true }));
         
-        // Replace with actual API call to Supabase
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+        // Fetch messages from Março | Menssagem Bruno
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('Março | Menssagem Bruno')
+          .select('*')
+          .eq('conversation_id', selectedLeadId)
+          .order('created_at', { ascending: true });
         
-        const leadMessages = MOCK_MESSAGES[selectedLeadId] || [];
-        setMessages(leadMessages);
+        if (messagesError) throw messagesError;
+        
+        // Convert to our Message format
+        const messagesList: Message[] = messagesData.map(convertToMessage);
+        
+        setMessages(messagesList);
+        console.log('Fetched messages:', messagesList);
       } catch (error) {
         console.error('Error fetching messages:', error);
+        toast.error('Erro ao buscar mensagens');
       } finally {
         setLoading(prev => ({ ...prev, messages: false }));
       }
@@ -322,6 +412,9 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     fetchMessages();
   }, [selectedLeadId]);
+
+  // Get the selected lead
+  const selectedLead = leads.find(lead => lead.id === selectedLeadId) || null;
 
   // Apply filters to leads
   useEffect(() => {
@@ -382,16 +475,25 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const assignLead = async (leadId: string, userId: string | null) => {
     try {
-      // Replace with actual API call to Supabase
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+      // Update in Supabase
+      const { error } = await supabase
+        .from('Março | FUNIL Bruno')
+        .update({ vendedor: userId })
+        .eq('id', leadId);
       
+      if (error) throw error;
+      
+      // Update local state
       setLeads(prevLeads => 
         prevLeads.map(lead => 
           lead.id === leadId ? { ...lead, assignedTo: userId } : lead
         )
       );
+      
+      toast.success('Lead atribuído com sucesso');
     } catch (error) {
       console.error('Error assigning lead:', error);
+      toast.error('Erro ao atribuir lead');
       throw error;
     }
   };
@@ -400,14 +502,26 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
     
     try {
-      // Replace with actual API call to Supabase
-      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API delay
+      // Insert into Março | Menssagem Bruno
+      const { data, error } = await supabase
+        .from('Março | Menssagem Bruno')
+        .insert({
+          conversation_id: leadId,
+          message_content: content,
+          status: 'sent',
+          vendedor: user.name || 'User'
+        })
+        .select()
+        .single();
       
+      if (error) throw error;
+      
+      // Create new message for local state
       const newMessage: Message = {
-        id: `${leadId}-${Date.now()}`,
+        id: data.id.toString(),
         leadId,
         content,
-        sentAt: new Date().toISOString(),
+        sentAt: data.created_at,
         isFromLead: false,
         isAutomated: false,
         sentBy: user.name,
@@ -429,37 +543,80 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
         )
       );
       
-      // If we had MOCK_MESSAGES permanently, we would update it like this:
-      // MOCK_MESSAGES[leadId] = [...(MOCK_MESSAGES[leadId] || []), newMessage];
+      // Update in Março | FUNIL Bruno
+      await supabase
+        .from('Março | FUNIL Bruno')
+        .update({ 
+          HISTORICO_CONVERSA: `${selectedLead?.lastMessage || ''}\n${content}`
+        })
+        .eq('id', leadId);
+      
+      toast.success('Mensagem enviada');
     } catch (error) {
       console.error('Error sending message:', error);
+      toast.error('Erro ao enviar mensagem');
       throw error;
     }
   };
 
   const toggleAutomation = async (leadId: string) => {
     try {
-      // Replace with actual API call to Supabase
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+      // Find the current lead
+      const lead = leads.find(l => l.id === leadId);
+      if (!lead) return;
       
+      // Toggle the isAutomationPaused value
+      const newValue = !lead.isAutomationPaused;
+      
+      // Update in Supabase
+      const { error } = await supabase
+        .from('Março | FUNIL Bruno')
+        .update({ Time_is_active: !newValue })
+        .eq('id', leadId);
+      
+      if (error) throw error;
+      
+      // Update local state
       setLeads(prevLeads => 
         prevLeads.map(lead => 
           lead.id === leadId 
-            ? { ...lead, isAutomationPaused: !lead.isAutomationPaused } 
+            ? { ...lead, isAutomationPaused: newValue } 
             : lead
         )
       );
+      
+      toast.success(`Automação ${newValue ? 'pausada' : 'ativada'}`);
     } catch (error) {
       console.error('Error toggling automation:', error);
+      toast.error('Erro ao alterar automação');
       throw error;
     }
   };
 
   const updateLeadStage = async (leadId: string, stage: FunnelStage) => {
     try {
-      // Replace with actual API call to Supabase
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+      // Map our FunnelStage type to Março | FUNIL Bruno funil values
+      const stageMapping: Record<FunnelStage, string> = {
+        initial: 'Apresentação',
+        identification: 'Identificação',
+        awareness: 'Conscientização',
+        validation: 'Validação',
+        negotiation: 'Negociação',
+        objection: 'Objeção',
+        purchase: 'Compra'
+      };
       
+      // Update in Supabase
+      const { error } = await supabase
+        .from('Março | FUNIL Bruno')
+        .update({ 
+          funil: stageMapping[stage],
+        })
+        .eq('id', leadId);
+      
+      if (error) throw error;
+      
+      // Update local state
       setLeads(prevLeads => 
         prevLeads.map(lead => 
           lead.id === leadId 
@@ -471,8 +628,11 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : lead
         )
       );
+      
+      toast.success('Etapa do funil atualizada');
     } catch (error) {
       console.error('Error updating lead stage:', error);
+      toast.error('Erro ao atualizar etapa do funil');
       throw error;
     }
   };
@@ -481,14 +641,38 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(prev => ({ ...prev, leads: true }));
       
-      // Replace with actual API call to Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      // Fetch data from Março | FUNIL Bruno
+      const { data: funnelData, error: funnelError } = await supabase
+        .from('Março | FUNIL Bruno')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      // In a real app, this would fetch the latest data from Supabase
-      // For now, we'll just shuffle the array to simulate changes
-      setLeads([...MOCK_LEADS].sort(() => Math.random() - 0.5));
+      if (funnelError) throw funnelError;
+      
+      // Fetch user data from Março | Cadastro Bruno
+      const { data: cadastroData, error: cadastroError } = await supabase
+        .from('Março | Cadastro Bruno')
+        .select('*');
+      
+      if (cadastroError) throw cadastroError;
+      
+      // Create a map of cadastro data by ID for quick lookup
+      const cadastroMap = new Map();
+      cadastroData.forEach((item: any) => {
+        cadastroMap.set(item.id, item);
+      });
+      
+      // Convert the data to our Lead format
+      const leadsList: Lead[] = funnelData.map((funnel: any) => {
+        const cadastro = cadastroMap.get(funnel.id);
+        return convertToLead(funnel, cadastro);
+      });
+      
+      setLeads(leadsList);
+      toast.success('Leads atualizados');
     } catch (error) {
       console.error('Error refreshing leads:', error);
+      toast.error('Erro ao atualizar leads');
     } finally {
       setLoading(prev => ({ ...prev, leads: false }));
     }

@@ -7,6 +7,7 @@ import { Send, PauseCircle, PlayCircle, ChevronRight, ChevronLeft } from 'lucide
 import ChatMessage from './ChatMessage';
 import LeadProfile from './LeadProfile';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const ChatInterface = () => {
   const { selectedLead, messages, loading, sendMessage, toggleAutomation } = useLeads();
@@ -24,14 +25,22 @@ const ChatInterface = () => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedLead || !messageText.trim()) return;
+    if (!selectedLead || !messageText.trim()) {
+      if (!selectedLead) {
+        toast.error('Selecione um lead para enviar mensagem');
+      }
+      return;
+    }
     
     sendMessage(selectedLead.id, messageText.trim());
     setMessageText('');
   };
   
   const handleToggleAutomation = () => {
-    if (!selectedLead) return;
+    if (!selectedLead) {
+      toast.error('Selecione um lead para alternar automação');
+      return;
+    }
     toggleAutomation(selectedLead.id);
   };
   
