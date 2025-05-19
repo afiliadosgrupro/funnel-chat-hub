@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps } from 'recharts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
@@ -86,6 +86,26 @@ const FunnelChart = () => {
     'Compra': { color: '#10b981' },
   };
   
+  // Componente personalizado para o tooltip
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+    if (!active || !payload || !payload.length) {
+      return null;
+    }
+    
+    const data = payload[0];
+    const stageName = data.name || '';
+    const value = data.value || 0;
+    
+    return (
+      <div className="rounded-md border bg-white p-2 shadow-md">
+        <p className="font-medium">{stageName}</p>
+        <p className="text-sm text-gray-500">
+          <span className="font-medium text-gray-700">{value}</span> leads
+        </p>
+      </div>
+    );
+  };
+  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -123,9 +143,7 @@ const FunnelChart = () => {
                   fontSize={12}
                   allowDecimals={false}
                 />
-                <Tooltip 
-                  content={(props) => <ChartTooltipContent {...props} />}
-                />
+                <Tooltip content={<CustomTooltip />} />
                 <Bar 
                   dataKey="count" 
                   fill="var(--color-Apresentação, #22c55e)" 
