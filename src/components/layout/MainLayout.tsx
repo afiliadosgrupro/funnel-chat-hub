@@ -1,8 +1,14 @@
 
+import { ReactNode } from 'react';
+import Header from './Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
-const Index = () => {
+interface MainLayoutProps {
+  children: ReactNode;
+}
+
+const MainLayout = ({ children }: MainLayoutProps) => {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
@@ -13,11 +19,18 @@ const Index = () => {
     );
   }
   
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  } else {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1 p-4 lg:p-6 bg-gray-50">
+        {children}
+      </main>
+    </div>
+  );
 };
 
-export default Index;
+export default MainLayout;
