@@ -1,114 +1,102 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLeads } from '@/contexts/LeadContext';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { Flame, HandCoins, Users, AlertTriangle } from 'lucide-react';
+
+interface StatsData {
+  totalLeads: number;
+  hotLeads: number;
+  negotiationLeads: number;
+  needsAttention: number;
+}
 
 const LeadStats = () => {
-  const { leads } = useLeads();
+  const [stats, setStats] = useState<StatsData>({
+    totalLeads: 0,
+    hotLeads: 0,
+    negotiationLeads: 0,
+    needsAttention: 0
+  });
   
-  const stats = {
-    totalLeads: leads.length,
-    hotLeads: leads.filter(l => l.isHot).length,
-    negotiationLeads: leads.filter(l => l.stage === 'negotiation').length,
-    needsAttention: leads.filter(l => 
-      ['negotiation', 'objection'].includes(l.stage) && 
-      l.assignedTo === null
-    ).length,
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetchStatsData();
+  }, []);
+  
+  const fetchStatsData = async () => {
+    setLoading(true);
+    
+    try {
+      // Buscar dados da tabela Março | FUNIL Bruno
+      const { data: funnelData, error: funnelError } = await supabase
+        .from('Março | FUNIL Bruno')
+        .select('*');
+        
+      if (funnelError) throw funnelError;
+      
+      // Calcular estatísticas
+      const totalLeads = funnelData.length;
+      
+      // Considerando leads em estágios avançados como "quentes"
+      const hotLeads = funnelData.filter(lead => 
+        ['Negociação', 'Validação'].includes(lead.funil || '')
+      ).length;
+      
+      // Leads em negociação
+      const negotiationLeads = funnelData.filter(lead => 
+        lead.funil === 'Negociação'
+      ).length;
+      
+      // Leads que precisam de atenção (tem objeções ou estão em negociação sem vendedor)
+      const needsAttention = funnelData.filter(lead => 
+        (lead.funil === 'Objeção' || 
+        (lead.funil === 'Negociação' && !lead.vendedor))
+      ).length;
+      
+      setStats({
+        totalLeads,
+        hotLeads,
+        negotiationLeads,
+        needsAttention
+      });
+    } catch (err) {
+      console.error('Erro ao buscar dados de estatísticas:', err);
+    } finally {
+      setLoading(false);
+    }
   };
   
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalLeads}</div>
-          <p className="text-xs text-muted-foreground">Em todas as etapas do funil</p>
-        </CardContent>
-      </Card>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <CardTitle className="text-sm font-medium">Leads Quentes</CardTitle>
+        <Flame className="h-4 w-4 text-orange-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{loading ? '-' : stats.hotLeads}</div>
+        <p className="text-xs text-muted-foreground">Prontos para conversão</p>
+      </CardContent>
       
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium">Leads Quentes</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M12 2v16M2 12h16" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.hotLeads}</div>
-          <p className="text-xs text-muted-foreground">Prontos para conversão</p>
-        </CardContent>
-      </Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 border-t pt-4">
+        <CardTitle className="text-sm font-medium">Em Negociação</CardTitle>
+        <HandCoins className="h-4 w-4 text-blue-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{loading ? '-' : stats.negotiationLeads}</div>
+        <p className="text-xs text-muted-foreground">Próximos da compra</p>
+      </CardContent>
       
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium">Em Negociação</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <rect width="20" height="14" x="2" y="5" rx="2" />
-            <path d="M2 10h20" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.negotiationLeads}</div>
-          <p className="text-xs text-muted-foreground">Próximos da compra</p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium">Atenção Necessária</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.needsAttention}</div>
-          <p className="text-xs text-muted-foreground">Requer intervenção manual</p>
-        </CardContent>
-      </Card>
-    </div>
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 border-t pt-4">
+        <CardTitle className="text-sm font-medium">Atenção Necessária</CardTitle>
+        <AlertTriangle className="h-4 w-4 text-red-500" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{loading ? '-' : stats.needsAttention}</div>
+        <p className="text-xs text-muted-foreground">Requer intervenção manual</p>
+      </CardContent>
+    </Card>
   );
 };
 

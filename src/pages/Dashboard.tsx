@@ -1,6 +1,7 @@
 
 import MainLayout from '@/components/layout/MainLayout';
 import LeadStats from '@/components/dashboard/LeadStats';
+import FunnelChart from '@/components/dashboard/FunnelChart';
 import FunnelOverview from '@/components/dashboard/FunnelOverview';
 import LeadList from '@/components/dashboard/LeadList';
 import ChatInterface from '@/components/chat/ChatInterface';
@@ -11,23 +12,28 @@ const Dashboard = () => {
     <LeadProvider>
       <MainLayout>
         <div className="space-y-6">
-          {/* Stats */}
-          <LeadStats />
-          
-          {/* Main content */}
+          {/* Stats e Gráfico */}
           <div className="grid lg:grid-cols-4 gap-6">
-            {/* Left sidebar - lead funnel overview */}
-            <div>
+            {/* Gráfico de leads do dia */}
+            <div className="lg:col-span-3">
+              <FunnelChart />
+            </div>
+            
+            {/* Stats resumidos */}
+            <div className="lg:col-span-1">
+              <LeadStats />
+            </div>
+          </div>
+          
+          {/* Conteúdo principal */}
+          <div className="grid lg:grid-cols-4 gap-6">
+            {/* Esquerda - lista de conversas */}
+            <div className="lg:col-span-1 h-[600px]">
               <FunnelOverview />
             </div>
             
-            {/* Middle - lead list */}
-            <div className="lg:col-span-1 h-[600px]">
-              <LeadList />
-            </div>
-            
-            {/* Right - chat interface */}
-            <div className="lg:col-span-2 h-[600px]">
+            {/* Centro - chat interface */}
+            <div className="lg:col-span-3 h-[600px]">
               <ChatInterface />
             </div>
           </div>
