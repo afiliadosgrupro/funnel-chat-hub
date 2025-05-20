@@ -15,7 +15,10 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Save, Building, MessageSquare, LucideGithub } from 'lucide-react';
+import { 
+  Loader2, Save, Building, MessageSquare, LucideGithub, 
+  Facebook, CreditCard, Receipt, ShoppingBag, Sheet 
+} from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -55,9 +58,52 @@ const openaiSchema = z.object({
   openai_ativo: z.boolean().optional()
 });
 
+// Schema for the Facebook integration form
+const facebookSchema = z.object({
+  facebook_token_pagina: z.string().optional(),
+  facebook_token_usuario: z.string().optional(),
+  facebook_token_api: z.string().optional(),
+  facebook_pixel_id: z.string().optional(),
+  facebook_app_id: z.string().optional(),
+  facebook_ativo: z.boolean().optional()
+});
+
+// Schema for the Braip integration form
+const braipSchema = z.object({
+  braip_webhook_url: z.string().optional(),
+  braip_token: z.string().optional(),
+  braip_ativo: z.boolean().optional()
+});
+
+// Schema for the Keed integration form
+const keedSchema = z.object({
+  keed_webhook_url: z.string().optional(),
+  keed_token: z.string().optional(),
+  keed_ativo: z.boolean().optional()
+});
+
+// Schema for the Payt integration form
+const paytSchema = z.object({
+  payt_webhook_url: z.string().optional(),
+  payt_token: z.string().optional(),
+  payt_ativo: z.boolean().optional()
+});
+
+// Schema for the Google Sheets integration form
+const googleSheetsSchema = z.object({
+  google_sheets_token: z.string().optional(),
+  google_sheets_id_planilha: z.string().optional(),
+  google_sheets_ativo: z.boolean().optional()
+});
+
 type CompanyProfileFormValues = z.infer<typeof companyProfileSchema>;
 type WhatsappFormValues = z.infer<typeof whatsappSchema>;
 type OpenAIFormValues = z.infer<typeof openaiSchema>;
+type FacebookFormValues = z.infer<typeof facebookSchema>;
+type BraipFormValues = z.infer<typeof braipSchema>;
+type KeedFormValues = z.infer<typeof keedSchema>;
+type PaytFormValues = z.infer<typeof paytSchema>;
+type GoogleSheetsFormValues = z.infer<typeof googleSheetsSchema>;
 
 const Settings = () => {
   const { user } = useAuth();
@@ -99,6 +145,54 @@ const Settings = () => {
       openai_assistente_id: '',
       openai_modelo_preferido: 'gpt-4',
       openai_ativo: false
+    }
+  });
+
+  const facebookForm = useForm<FacebookFormValues>({
+    resolver: zodResolver(facebookSchema),
+    defaultValues: {
+      facebook_token_pagina: '',
+      facebook_token_usuario: '',
+      facebook_token_api: '',
+      facebook_pixel_id: '',
+      facebook_app_id: '',
+      facebook_ativo: false
+    }
+  });
+
+  const braipForm = useForm<BraipFormValues>({
+    resolver: zodResolver(braipSchema),
+    defaultValues: {
+      braip_webhook_url: '',
+      braip_token: '',
+      braip_ativo: false
+    }
+  });
+
+  const keedForm = useForm<KeedFormValues>({
+    resolver: zodResolver(keedSchema),
+    defaultValues: {
+      keed_webhook_url: '',
+      keed_token: '',
+      keed_ativo: false
+    }
+  });
+
+  const paytForm = useForm<PaytFormValues>({
+    resolver: zodResolver(paytSchema),
+    defaultValues: {
+      payt_webhook_url: '',
+      payt_token: '',
+      payt_ativo: false
+    }
+  });
+
+  const googleSheetsForm = useForm<GoogleSheetsFormValues>({
+    resolver: zodResolver(googleSheetsSchema),
+    defaultValues: {
+      google_sheets_token: '',
+      google_sheets_id_planilha: '',
+      google_sheets_ativo: false
     }
   });
 
@@ -155,6 +249,44 @@ const Settings = () => {
             openai_assistente_id: data.openai_assistente_id || '',
             openai_modelo_preferido: data.openai_modelo_preferido || 'gpt-4',
             openai_ativo: data.openai_ativo || false
+          });
+          
+          // Set form values for Facebook
+          facebookForm.reset({
+            facebook_token_pagina: data.facebook_token_pagina || '',
+            facebook_token_usuario: data.facebook_token_usuario || '',
+            facebook_token_api: data.facebook_token_api || '',
+            facebook_pixel_id: data.facebook_pixel_id || '',
+            facebook_app_id: data.facebook_app_id || '',
+            facebook_ativo: data.facebook_ativo || false
+          });
+          
+          // Set form values for Braip
+          braipForm.reset({
+            braip_webhook_url: data.braip_webhook_url || '',
+            braip_token: data.braip_token || '',
+            braip_ativo: data.braip_ativo || false
+          });
+          
+          // Set form values for Keed
+          keedForm.reset({
+            keed_webhook_url: data.keed_webhook_url || '',
+            keed_token: data.keed_token || '',
+            keed_ativo: data.keed_ativo || false
+          });
+          
+          // Set form values for Payt
+          paytForm.reset({
+            payt_webhook_url: data.payt_webhook_url || '',
+            payt_token: data.payt_token || '',
+            payt_ativo: data.payt_ativo || false
+          });
+          
+          // Set form values for Google Sheets
+          googleSheetsForm.reset({
+            google_sheets_token: data.google_sheets_token || '',
+            google_sheets_id_planilha: data.google_sheets_id_planilha || '',
+            google_sheets_ativo: data.google_sheets_ativo || false
           });
         }
       } catch (error) {
@@ -290,6 +422,194 @@ const Settings = () => {
       setLoading(false);
     }
   };
+  
+  // Handle Facebook form submission
+  const onSubmitFacebook = async (values: FacebookFormValues) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('SAAS_usuarios')
+        .update({
+          facebook_token_pagina: values.facebook_token_pagina,
+          facebook_token_usuario: values.facebook_token_usuario,
+          facebook_token_api: values.facebook_token_api,
+          facebook_pixel_id: values.facebook_pixel_id,
+          facebook_app_id: values.facebook_app_id,
+          facebook_ativo: values.facebook_ativo,
+          data_alteracao: new Date().toISOString()
+        })
+        .eq('email', user.email);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Configurações do Facebook atualizadas com sucesso.',
+      });
+    } catch (error: any) {
+      console.error('Erro ao atualizar configurações do Facebook:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar as configurações do Facebook.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle Braip form submission
+  const onSubmitBraip = async (values: BraipFormValues) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('SAAS_usuarios')
+        .update({
+          braip_webhook_url: values.braip_webhook_url,
+          braip_token: values.braip_token,
+          braip_ativo: values.braip_ativo,
+          data_alteracao: new Date().toISOString()
+        })
+        .eq('email', user.email);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Configurações da Braip atualizadas com sucesso.',
+      });
+    } catch (error: any) {
+      console.error('Erro ao atualizar configurações da Braip:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar as configurações da Braip.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle Keed form submission
+  const onSubmitKeed = async (values: KeedFormValues) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('SAAS_usuarios')
+        .update({
+          keed_webhook_url: values.keed_webhook_url,
+          keed_token: values.keed_token,
+          keed_ativo: values.keed_ativo,
+          data_alteracao: new Date().toISOString()
+        })
+        .eq('email', user.email);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Configurações da Keed atualizadas com sucesso.',
+      });
+    } catch (error: any) {
+      console.error('Erro ao atualizar configurações da Keed:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar as configurações da Keed.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle Payt form submission
+  const onSubmitPayt = async (values: PaytFormValues) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('SAAS_usuarios')
+        .update({
+          payt_webhook_url: values.payt_webhook_url,
+          payt_token: values.payt_token,
+          payt_ativo: values.payt_ativo,
+          data_alteracao: new Date().toISOString()
+        })
+        .eq('email', user.email);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Configurações da Payt atualizadas com sucesso.',
+      });
+    } catch (error: any) {
+      console.error('Erro ao atualizar configurações da Payt:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar as configurações da Payt.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle Google Sheets form submission
+  const onSubmitGoogleSheets = async (values: GoogleSheetsFormValues) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('SAAS_usuarios')
+        .update({
+          google_sheets_token: values.google_sheets_token,
+          google_sheets_id_planilha: values.google_sheets_id_planilha,
+          google_sheets_ativo: values.google_sheets_ativo,
+          data_alteracao: new Date().toISOString()
+        })
+        .eq('email', user.email);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Configurações do Google Sheets atualizadas com sucesso.',
+      });
+    } catch (error: any) {
+      console.error('Erro ao atualizar configurações do Google Sheets:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar as configurações do Google Sheets.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // If user data failed to load, show error message
   if (!loading && !userData && user) {
@@ -321,7 +641,7 @@ const Settings = () => {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none gap-2">
+            <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-4 md:grid-cols-none gap-2 overflow-x-auto">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
                 <span>Perfil da Empresa</span>
@@ -333,6 +653,26 @@ const Settings = () => {
               <TabsTrigger value="openai" className="flex items-center gap-2">
                 <LucideGithub className="h-4 w-4" />
                 <span>OpenAI</span>
+              </TabsTrigger>
+              <TabsTrigger value="facebook" className="flex items-center gap-2">
+                <Facebook className="h-4 w-4" />
+                <span>Facebook</span>
+              </TabsTrigger>
+              <TabsTrigger value="braip" className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                <span>Braip</span>
+              </TabsTrigger>
+              <TabsTrigger value="keed" className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                <span>Keed</span>
+              </TabsTrigger>
+              <TabsTrigger value="payt" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                <span>Payt</span>
+              </TabsTrigger>
+              <TabsTrigger value="google-sheets" className="flex items-center gap-2">
+                <Sheet className="h-4 w-4" />
+                <span>Google Sheets</span>
               </TabsTrigger>
             </TabsList>
             
@@ -675,6 +1015,481 @@ const Settings = () => {
                               </FormLabel>
                               <FormDescription>
                                 Ativa ou desativa a integração com a OpenAI
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full md:w-auto bg-whatsapp hover:bg-whatsapp-dark"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Salvar Configurações
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Configurações do Facebook */}
+            <TabsContent value="facebook">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações do Facebook</CardTitle>
+                  <CardDescription>
+                    Configure a integração com a API do Facebook
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...facebookForm}>
+                    <form onSubmit={facebookForm.handleSubmit(onSubmitFacebook)} className="space-y-4">
+                      <FormField
+                        control={facebookForm.control}
+                        name="facebook_token_pagina"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token da Página</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token da página do Facebook" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={facebookForm.control}
+                        name="facebook_token_usuario"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token do Usuário</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token de acesso do usuário" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={facebookForm.control}
+                        name="facebook_token_api"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token da API</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token da API do Facebook" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={facebookForm.control}
+                        name="facebook_pixel_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ID do Pixel</FormLabel>
+                            <FormControl>
+                              <Input placeholder="ID do pixel de conversão" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={facebookForm.control}
+                        name="facebook_app_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ID do Aplicativo</FormLabel>
+                            <FormControl>
+                              <Input placeholder="ID do aplicativo do Facebook" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={facebookForm.control}
+                        name="facebook_ativo"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                API Ativa
+                              </FormLabel>
+                              <FormDescription>
+                                Ativa ou desativa a integração com o Facebook
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full md:w-auto bg-whatsapp hover:bg-whatsapp-dark"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Salvar Configurações
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Configurações da Braip */}
+            <TabsContent value="braip">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações da Braip</CardTitle>
+                  <CardDescription>
+                    Configure a integração com a plataforma Braip
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...braipForm}>
+                    <form onSubmit={braipForm.handleSubmit(onSubmitBraip)} className="space-y-4">
+                      <FormField
+                        control={braipForm.control}
+                        name="braip_webhook_url"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>URL do Webhook</FormLabel>
+                            <FormControl>
+                              <Input placeholder="URL para receber notificações da Braip" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={braipForm.control}
+                        name="braip_token"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token da API</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token de autenticação da API Braip" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={braipForm.control}
+                        name="braip_ativo"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                API Ativa
+                              </FormLabel>
+                              <FormDescription>
+                                Ativa ou desativa a integração com a Braip
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full md:w-auto bg-whatsapp hover:bg-whatsapp-dark"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Salvar Configurações
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Configurações da Keed */}
+            <TabsContent value="keed">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações da Keed</CardTitle>
+                  <CardDescription>
+                    Configure a integração com a plataforma Keed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...keedForm}>
+                    <form onSubmit={keedForm.handleSubmit(onSubmitKeed)} className="space-y-4">
+                      <FormField
+                        control={keedForm.control}
+                        name="keed_webhook_url"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>URL do Webhook</FormLabel>
+                            <FormControl>
+                              <Input placeholder="URL para receber notificações da Keed" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={keedForm.control}
+                        name="keed_token"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token da API</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token de autenticação da API Keed" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={keedForm.control}
+                        name="keed_ativo"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                API Ativa
+                              </FormLabel>
+                              <FormDescription>
+                                Ativa ou desativa a integração com a Keed
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full md:w-auto bg-whatsapp hover:bg-whatsapp-dark"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Salvar Configurações
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Configurações da Payt */}
+            <TabsContent value="payt">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações da Payt</CardTitle>
+                  <CardDescription>
+                    Configure a integração com a plataforma Payt
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...paytForm}>
+                    <form onSubmit={paytForm.handleSubmit(onSubmitPayt)} className="space-y-4">
+                      <FormField
+                        control={paytForm.control}
+                        name="payt_webhook_url"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>URL do Webhook</FormLabel>
+                            <FormControl>
+                              <Input placeholder="URL para receber notificações da Payt" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={paytForm.control}
+                        name="payt_token"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token da API</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token de autenticação da API Payt" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={paytForm.control}
+                        name="payt_ativo"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                API Ativa
+                              </FormLabel>
+                              <FormDescription>
+                                Ativa ou desativa a integração com a Payt
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full md:w-auto bg-whatsapp hover:bg-whatsapp-dark"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Salvar Configurações
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Configurações do Google Sheets */}
+            <TabsContent value="google-sheets">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações do Google Sheets</CardTitle>
+                  <CardDescription>
+                    Configure a integração com o Google Sheets
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...googleSheetsForm}>
+                    <form onSubmit={googleSheetsForm.handleSubmit(onSubmitGoogleSheets)} className="space-y-4">
+                      <FormField
+                        control={googleSheetsForm.control}
+                        name="google_sheets_token"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token de Acesso</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Token de autenticação do Google Sheets" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={googleSheetsForm.control}
+                        name="google_sheets_id_planilha"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ID da Planilha</FormLabel>
+                            <FormControl>
+                              <Input placeholder="ID da planilha no Google Sheets" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              O ID está presente na URL da planilha
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={googleSheetsForm.control}
+                        name="google_sheets_ativo"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                API Ativa
+                              </FormLabel>
+                              <FormDescription>
+                                Ativa ou desativa a integração com o Google Sheets
                               </FormDescription>
                             </div>
                             <FormControl>
