@@ -1,28 +1,48 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Bell, LogOut, Settings, User, LayoutDashboard } from 'lucide-react';
+import { Bell, LogOut, Settings, User, LayoutDashboard, TrendingUp, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from '@/components/ui/Logo';
+
 const Header = () => {
   const {
     user,
     logout
   } = useAuth();
+  
   const getInitials = (name: string) => {
     return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2);
   };
+  
   return <header className="border-b bg-white px-4 lg:px-6">
       <div className="flex h-16 items-center justify-between">
         <div className="flex items-center gap-4">
           <Logo />
-          {user && <Link to="/dashboard">
-              <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden md:inline">Dashboard</span>
-              </Button>
-            </Link>}
+          {user && (
+            <div className="flex items-center gap-2">
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden md:inline">Dashboard</span>
+                </Button>
+              </Link>
+              <Link to="/analysis">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  <Activity className="h-4 w-4" />
+                  <span className="hidden md:inline">Análise</span>
+                </Button>
+              </Link>
+              <Link to="/remarketing">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden md:inline">Remarketing</span>
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
@@ -69,4 +89,5 @@ const Header = () => {
       </div>
     </header>;
 };
+
 export default Header;
