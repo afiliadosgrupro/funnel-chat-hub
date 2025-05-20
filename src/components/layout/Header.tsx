@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Bell, LogOut, Settings, User } from 'lucide-react';
+import { Bell, LogOut, Settings, User, LayoutDashboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from '@/components/ui/Logo';
 
@@ -31,6 +31,14 @@ const Header = () => {
       <div className="flex h-16 items-center justify-between">
         <div className="flex items-center gap-4">
           <Logo />
+          {user && (
+            <Link to="/dashboard">
+              <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden md:inline">Dashboard</span>
+              </Button>
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <Button

@@ -1,5 +1,7 @@
 
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 interface LogoProps {
   className?: string;
@@ -7,13 +9,14 @@ interface LogoProps {
 }
 
 const Logo = ({ className, size = 'md' }: LogoProps) => {
+  const { isAuthenticated } = useAuth();
   const sizes = {
     sm: 'h-6',
     md: 'h-8',
     lg: 'h-12',
   };
   
-  return (
+  const LogoContent = () => (
     <div className={cn('flex items-center', className)}>
       <div className={cn('text-whatsapp font-bold flex items-center', sizes[size])}>
         <svg 
@@ -26,6 +29,14 @@ const Logo = ({ className, size = 'md' }: LogoProps) => {
         <span>NutriSales</span>
       </div>
     </div>
+  );
+  
+  return isAuthenticated ? (
+    <Link to="/dashboard" className="hover:opacity-80 transition-opacity">
+      <LogoContent />
+    </Link>
+  ) : (
+    <LogoContent />
   );
 };
 
