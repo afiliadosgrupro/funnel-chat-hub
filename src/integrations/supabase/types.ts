@@ -666,28 +666,46 @@ export type Database = {
       }
       "Março | Menssagem Bruno": {
         Row: {
+          base64_midia: string | null
           conversation_id: string | null
           created_at: string
+          foi_lida: boolean | null
           id: number
           message_content: string | null
+          miniatura: string | null
+          nome_remente: string | null
           status: string | null
-          vendedor: string | null
+          tipo_mensagem: string | null
+          url_midia: string | null
+          whatsapp_id_mensagem: string | null
         }
         Insert: {
+          base64_midia?: string | null
           conversation_id?: string | null
           created_at?: string
+          foi_lida?: boolean | null
           id?: number
           message_content?: string | null
+          miniatura?: string | null
+          nome_remente?: string | null
           status?: string | null
-          vendedor?: string | null
+          tipo_mensagem?: string | null
+          url_midia?: string | null
+          whatsapp_id_mensagem?: string | null
         }
         Update: {
+          base64_midia?: string | null
           conversation_id?: string | null
           created_at?: string
+          foi_lida?: boolean | null
           id?: number
           message_content?: string | null
+          miniatura?: string | null
+          nome_remente?: string | null
           status?: string | null
-          vendedor?: string | null
+          tipo_mensagem?: string | null
+          url_midia?: string | null
+          whatsapp_id_mensagem?: string | null
         }
         Relationships: [
           {
