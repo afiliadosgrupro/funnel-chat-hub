@@ -1054,6 +1054,186 @@ export type Database = {
           },
         ]
       }
+      SAAS_usuarios: {
+        Row: {
+          ativo: boolean | null
+          braip_ativo: boolean | null
+          braip_token: string | null
+          braip_webhook_url: string | null
+          cnpj: string | null
+          config_funil: Json | null
+          config_notificacoes: Json | null
+          config_remarketing: Json | null
+          configuracoes_extras: Json | null
+          data_alteracao: string | null
+          data_criacao: string | null
+          email: string
+          endereco_empresa: string | null
+          facebook_app_id: string | null
+          facebook_ativo: boolean | null
+          facebook_pixel_id: string | null
+          facebook_token_api: string | null
+          facebook_token_pagina: string | null
+          facebook_token_usuario: string | null
+          google_sheets_ativo: boolean | null
+          google_sheets_id_planilha: string | null
+          google_sheets_token: string | null
+          id: number
+          keed_ativo: boolean | null
+          keed_token: string | null
+          keed_webhook_url: string | null
+          leads_processados_mes: number | null
+          limite_leads_simultaneos: number | null
+          metadados: Json | null
+          n8n_webhook_url: string | null
+          nome_empresa: string | null
+          nome_usuario: string
+          openai_assistente_id: string | null
+          openai_ativo: boolean | null
+          openai_modelo_preferido: string | null
+          openai_token: string | null
+          payt_ativo: boolean | null
+          payt_token: string | null
+          payt_webhook_url: string | null
+          produto_principal: string | null
+          produtos_ativos: string[] | null
+          receita_mes: number | null
+          senha_hash: string
+          supabase_anon_key: string | null
+          supabase_url: string | null
+          telefone_empresa: string | null
+          tipo_usuario: string | null
+          ultimo_acesso: string | null
+          vendas_realizadas_mes: number | null
+          whatsapp_api_key: string | null
+          whatsapp_instancia: string | null
+          whatsapp_nome_perfil: string | null
+          whatsapp_numero: string | null
+          whatsapp_status: string | null
+          whatsapp_url_servidor: string | null
+          whatsapp_webhook_conectado: boolean | null
+          whatsapp_webhook_url: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          braip_ativo?: boolean | null
+          braip_token?: string | null
+          braip_webhook_url?: string | null
+          cnpj?: string | null
+          config_funil?: Json | null
+          config_notificacoes?: Json | null
+          config_remarketing?: Json | null
+          configuracoes_extras?: Json | null
+          data_alteracao?: string | null
+          data_criacao?: string | null
+          email: string
+          endereco_empresa?: string | null
+          facebook_app_id?: string | null
+          facebook_ativo?: boolean | null
+          facebook_pixel_id?: string | null
+          facebook_token_api?: string | null
+          facebook_token_pagina?: string | null
+          facebook_token_usuario?: string | null
+          google_sheets_ativo?: boolean | null
+          google_sheets_id_planilha?: string | null
+          google_sheets_token?: string | null
+          id: number
+          keed_ativo?: boolean | null
+          keed_token?: string | null
+          keed_webhook_url?: string | null
+          leads_processados_mes?: number | null
+          limite_leads_simultaneos?: number | null
+          metadados?: Json | null
+          n8n_webhook_url?: string | null
+          nome_empresa?: string | null
+          nome_usuario: string
+          openai_assistente_id?: string | null
+          openai_ativo?: boolean | null
+          openai_modelo_preferido?: string | null
+          openai_token?: string | null
+          payt_ativo?: boolean | null
+          payt_token?: string | null
+          payt_webhook_url?: string | null
+          produto_principal?: string | null
+          produtos_ativos?: string[] | null
+          receita_mes?: number | null
+          senha_hash: string
+          supabase_anon_key?: string | null
+          supabase_url?: string | null
+          telefone_empresa?: string | null
+          tipo_usuario?: string | null
+          ultimo_acesso?: string | null
+          vendas_realizadas_mes?: number | null
+          whatsapp_api_key?: string | null
+          whatsapp_instancia?: string | null
+          whatsapp_nome_perfil?: string | null
+          whatsapp_numero?: string | null
+          whatsapp_status?: string | null
+          whatsapp_url_servidor?: string | null
+          whatsapp_webhook_conectado?: boolean | null
+          whatsapp_webhook_url?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          braip_ativo?: boolean | null
+          braip_token?: string | null
+          braip_webhook_url?: string | null
+          cnpj?: string | null
+          config_funil?: Json | null
+          config_notificacoes?: Json | null
+          config_remarketing?: Json | null
+          configuracoes_extras?: Json | null
+          data_alteracao?: string | null
+          data_criacao?: string | null
+          email?: string
+          endereco_empresa?: string | null
+          facebook_app_id?: string | null
+          facebook_ativo?: boolean | null
+          facebook_pixel_id?: string | null
+          facebook_token_api?: string | null
+          facebook_token_pagina?: string | null
+          facebook_token_usuario?: string | null
+          google_sheets_ativo?: boolean | null
+          google_sheets_id_planilha?: string | null
+          google_sheets_token?: string | null
+          id?: number
+          keed_ativo?: boolean | null
+          keed_token?: string | null
+          keed_webhook_url?: string | null
+          leads_processados_mes?: number | null
+          limite_leads_simultaneos?: number | null
+          metadados?: Json | null
+          n8n_webhook_url?: string | null
+          nome_empresa?: string | null
+          nome_usuario?: string
+          openai_assistente_id?: string | null
+          openai_ativo?: boolean | null
+          openai_modelo_preferido?: string | null
+          openai_token?: string | null
+          payt_ativo?: boolean | null
+          payt_token?: string | null
+          payt_webhook_url?: string | null
+          produto_principal?: string | null
+          produtos_ativos?: string[] | null
+          receita_mes?: number | null
+          senha_hash?: string
+          supabase_anon_key?: string | null
+          supabase_url?: string | null
+          telefone_empresa?: string | null
+          tipo_usuario?: string | null
+          ultimo_acesso?: string | null
+          vendas_realizadas_mes?: number | null
+          whatsapp_api_key?: string | null
+          whatsapp_instancia?: string | null
+          whatsapp_nome_perfil?: string | null
+          whatsapp_numero?: string | null
+          whatsapp_status?: string | null
+          whatsapp_url_servidor?: string | null
+          whatsapp_webhook_conectado?: boolean | null
+          whatsapp_webhook_url?: string | null
+        }
+        Relationships: []
+      }
       TESTE: {
         Row: {
           Boleto: boolean | null

@@ -64,6 +64,12 @@ const Header = () => {
                   <User className="mr-2 h-4 w-4" />
                   <span>Perfil</span>
                 </DropdownMenuItem>
+                <Link to="/settings">
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
+                  </DropdownMenuItem>
+                </Link>
                 {user.role === 'admin' && (
                   <Link to="/admin">
                     <DropdownMenuItem>
