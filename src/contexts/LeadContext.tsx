@@ -387,6 +387,7 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       try {
         setLoading(prev => ({ ...prev, messages: true }));
+        console.log('Fetching messages for lead:', selectedLeadId);
         
         // Fetch messages from Março | Menssagem Bruno
         const { data: messagesData, error: messagesError } = await supabase
@@ -395,13 +396,16 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('conversation_id', selectedLeadId)
           .order('created_at', { ascending: true });
         
-        if (messagesError) throw messagesError;
+        if (messagesError) {
+          console.error('Error in query:', messagesError);
+          throw messagesError;
+        }
         
         // Convert to our Message format
-        const messagesList: Message[] = messagesData.map(convertToMessage);
+        const messagesList: Message[] = messagesData ? messagesData.map(convertToMessage) : [];
         
+        console.log('Fetched messages:', messagesList.length, messagesData);
         setMessages(messagesList);
-        console.log('Fetched messages:', messagesList);
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast.error('Erro ao buscar mensagens');
@@ -498,6 +502,25 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Function to get n8n webhook URL from database
+  const getN8nWebhookUrl = async (): Promise<string | null> => {
+    try {
+      // Get the n8n webhook URL from SAAS_usuarios table
+      const { data, error } = await supabase
+        .from('SAAS_usuarios')
+        .select('n8n_webhook_url')
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      return data?.n8n_webhook_url || null;
+    } catch (error) {
+      console.error('Error getting n8n webhook URL:', error);
+      return null;
+    }
+  };
+
   const sendMessage = async (leadId: string, content: string) => {
     if (!user) return;
     
@@ -550,6 +573,35 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
           HISTORICO_CONVERSA: `${selectedLead?.lastMessage || ''}\n${content}`
         })
         .eq('id', leadId);
+
+      // Send to n8n webhook if configured
+      const webhookUrl = await getN8nWebhookUrl();
+      if (webhookUrl) {
+        try {
+          const webhookResponse = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              leadId,
+              message: content,
+              sentBy: user.name,
+              sentAt: newMessage.sentAt,
+              leadData: selectedLead
+            })
+          });
+
+          if (!webhookResponse.ok) {
+            console.error('Failed to send to n8n webhook:', await webhookResponse.text());
+          } else {
+            console.log('Successfully sent to n8n webhook');
+          }
+        } catch (webhookError) {
+          console.error('Error sending to n8n webhook:', webhookError);
+          // Don't toast this error to the user, as it's not critical
+        }
+      }
       
       toast.success('Mensagem enviada');
     } catch (error) {
