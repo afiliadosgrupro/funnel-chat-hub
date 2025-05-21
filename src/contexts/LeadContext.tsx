@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Lead, Message, FunnelStage } from '@/types/lead';
 import { useAuth } from './AuthContext';
