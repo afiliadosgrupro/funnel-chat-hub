@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, Message, FunnelStage } from '@/types/lead';
 import { toast } from 'sonner';
@@ -50,8 +49,8 @@ export const convertToMessage = (msgData: any): Message => {
     content: msgData.message_content || '',
     sentAt: msgData.created_at,
     isFromLead: msgData.status === 'received',
-    isAutomated: msgData.vendedor === 'AI',
-    sentBy: msgData.vendedor !== 'AI' ? msgData.vendedor : undefined
+    isAutomated: false, // Não temos essa info na tabela
+    sentBy: undefined // Não temos essa info na tabela
   };
 };
 
@@ -96,7 +95,7 @@ export const fetchLeads = async (): Promise<Lead[]> => {
 // Fetch messages for a lead from Supabase
 export const fetchMessages = async (leadId: string): Promise<Message[]> => {
   try {
-    console.log('Fetching messages for lead:', leadId);
+    console.log('Buscando mensagens para lead:', leadId);
     
     // Fetch messages from Março | Menssagem Bruno
     const { data: messagesData, error: messagesError } = await supabase
@@ -106,17 +105,17 @@ export const fetchMessages = async (leadId: string): Promise<Message[]> => {
       .order('created_at', { ascending: true });
     
     if (messagesError) {
-      console.error('Error in query:', messagesError);
+      console.error('Erro na consulta:', messagesError);
       throw messagesError;
     }
     
     // Convert to our Message format
     const messagesList: Message[] = messagesData ? messagesData.map(convertToMessage) : [];
     
-    console.log('Fetched messages:', messagesList.length, messagesData);
+    console.log('Mensagens encontradas:', messagesList.length, messagesData);
     return messagesList;
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    console.error('Erro ao buscar mensagens:', error);
     toast.error('Erro ao buscar mensagens');
     throw error;
   }
@@ -197,23 +196,24 @@ export const updateLeadStage = async (leadId: string, stage: FunnelStage): Promi
 };
 
 // Send and save a message
-export const saveMessage = async (leadId: string, content: string, vendedor: string): Promise<Message> => {
+export const saveMessage = async (leadId: string, content: string, userName: string): Promise<Message> => {
   try {
-    // Insert into Março | Menssagem Bruno
+    // Inserir na tabela Março | Menssagem Bruno
+    // Removido o campo vendedor que não existe
     const { data, error } = await supabase
       .from('Março | Menssagem Bruno')
       .insert({
         conversation_id: leadId,
         message_content: content,
-        status: 'sent',
-        vendedor: vendedor
+        status: 'sent'
+        // Removido campo vendedor que causava erro
       })
       .select()
       .single();
     
     if (error) throw error;
     
-    // Create new message
+    // Criar nova mensagem
     const newMessage: Message = {
       id: data.id.toString(),
       leadId,
@@ -221,21 +221,21 @@ export const saveMessage = async (leadId: string, content: string, vendedor: str
       sentAt: data.created_at,
       isFromLead: false,
       isAutomated: false,
-      sentBy: vendedor,
+      sentBy: userName,
     };
     
-    // Update in Março | FUNIL Bruno
+    // Atualizar em Março | FUNIL Bruno
     await supabase
       .from('Março | FUNIL Bruno')
       .update({ 
-        HISTORICO_CONVERSA: content, // This might need adjustment based on requirements
+        HISTORICO_CONVERSA: content, 
         ULTIMA_INTERACAO_CLIENTE: new Date().toISOString()
       })
       .eq('id', leadId);
     
     return newMessage;
   } catch (error) {
-    console.error('Error saving message:', error);
+    console.error('Erro ao salvar mensagem:', error);
     toast.error('Erro ao salvar mensagem');
     throw error;
   }

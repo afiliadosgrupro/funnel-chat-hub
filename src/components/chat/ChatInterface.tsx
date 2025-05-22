@@ -22,6 +22,13 @@ const ChatInterface = () => {
     }
   }, [messages]);
   
+  // Log de debug quando um lead é selecionado
+  useEffect(() => {
+    if (selectedLead) {
+      console.info('Selecionando lead:', selectedLead.id);
+    }
+  }, [selectedLead]);
+  
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -44,7 +51,7 @@ const ChatInterface = () => {
     toggleAutomation(selectedLead.id);
   };
   
-  // Templates for quick replies
+  // Templates para respostas rápidas
   const messageTemplates = [
     "Olá! Como posso ajudar?",
     "O chá RMGI pode ajudar muito com esse problema.",
