@@ -5,15 +5,12 @@ import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 import { 
   fetchLeads,
-  fetchMessages,
   assignLead as apiAssignLead,
   toggleLeadAutomation,
   updateLeadStage as apiUpdateLeadStage,
-  saveMessage
 } from '@/services/leadService';
-import { sendWhatsAppMessage } from '@/services/whatsappService';
-import { sendToN8nWebhook } from '@/services/webhookService';
 import { useLeadFilters } from '@/hooks/useLeadFilters';
+import { useMessages } from '@/hooks/useMessages';
 
 interface LeadContextType {
   leads: Lead[];
@@ -47,7 +44,6 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState({
     leads: true,
     messages: false,
@@ -55,6 +51,22 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Use the filter hook
   const { filters, filteredLeads, updateFilters } = useLeadFilters(leads, user);
+
+  // Get the selected lead
+  const selectedLead = leads.find(lead => lead.id === selectedLeadId) || null;
+  
+  // Use the new messages hook
+  const { 
+    messages, 
+    loading: messagesLoading, 
+    sendMessage: hookSendMessage,
+    setMessages 
+  } = useMessages(selectedLeadId, selectedLead);
+
+  // Update loading state from messages hook
+  useEffect(() => {
+    setLoading(prev => ({ ...prev, messages: messagesLoading }));
+  }, [messagesLoading]);
 
   // Initial load of leads
   useEffect(() => {
@@ -72,28 +84,6 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     loadLeads();
   }, []);
-
-  // Load messages when a lead is selected
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!selectedLeadId) return;
-      
-      try {
-        setLoading(prev => ({ ...prev, messages: true }));
-        const loadedMessages = await fetchMessages(selectedLeadId);
-        setMessages(loadedMessages);
-      } catch (error) {
-        console.error('Error loading messages:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, messages: false }));
-      }
-    };
-
-    loadMessages();
-  }, [selectedLeadId]);
-
-  // Get the selected lead
-  const selectedLead = leads.find(lead => lead.id === selectedLeadId) || null;
 
   const assignLead = async (leadId: string, userId: string | null) => {
     try {
@@ -114,45 +104,25 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
     
     try {
-      // Get the lead to access phone number
-      const lead = leads.find(l => l.id === leadId);
-      if (!lead) {
-        toast.error('Lead não encontrado');
-        return;
+      const newMessage = await hookSendMessage(leadId, content, user.name || 'User');
+      
+      if (newMessage) {
+        // Update lead's last message in the leads list
+        setLeads(prevLeads => 
+          prevLeads.map(lead => 
+            lead.id === leadId 
+              ? { 
+                  ...lead, 
+                  lastMessage: content,
+                  lastMessageAt: newMessage.sentAt
+                } 
+              : lead
+          )
+        );
       }
-      
-      // Save message to database
-      const newMessage = await saveMessage(leadId, content, user.name || 'User');
-      
-      // Update messages
-      setMessages(prev => [...prev, newMessage]);
-      
-      // Update lead's last message
-      setLeads(prevLeads => 
-        prevLeads.map(lead => 
-          lead.id === leadId 
-            ? { 
-                ...lead, 
-                lastMessage: content,
-                lastMessageAt: newMessage.sentAt
-              } 
-            : lead
-        )
-      );
-      
-      // Send to n8n webhook if configured
-      await sendToN8nWebhook(leadId, content, user.name || 'User', newMessage.sentAt, selectedLead);
-      
-      // Send via WhatsApp using Evolution API
-      const whatsappSent = await sendWhatsAppMessage(lead.phone, content);
-      if (!whatsappSent) {
-        console.warn('Could not send WhatsApp message via Evolution API');
-      }
-      
-      toast.success('Mensagem enviada');
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Erro ao enviar mensagem');
+      // Error is already handled in the hook
+      console.error('Error in sendMessage handler:', error);
     }
   };
 
