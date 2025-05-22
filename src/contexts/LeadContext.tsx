@@ -520,10 +520,96 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Function to get WhatsApp credentials from database
+  const getWhatsAppCredentials = async (): Promise<{ instance: string; apiKey: string; baseUrl: string } | null> => {
+    try {
+      // Get the WhatsApp credentials from SAAS_usuarios table
+      const { data, error } = await supabase
+        .from('SAAS_usuarios')
+        .select('whatsapp_instancia, whatsapp_api_key')
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      if (!data?.whatsapp_instancia || !data?.whatsapp_api_key) {
+        console.error('Missing WhatsApp credentials in SAAS_usuarios');
+        return null;
+      }
+      
+      return {
+        instance: data.whatsapp_instancia,
+        apiKey: data.whatsapp_api_key,
+        baseUrl: "https://zapns.edgeserver.com.br"
+      };
+    } catch (error) {
+      console.error('Error getting WhatsApp credentials:', error);
+      return null;
+    }
+  };
+
+  // Function to send message via Evolution API
+  const sendWhatsAppMessage = async (phone: string, content: string): Promise<boolean> => {
+    try {
+      const credentials = await getWhatsAppCredentials();
+      
+      if (!credentials) {
+        console.error('No WhatsApp credentials available');
+        return false;
+      }
+      
+      const { instance, apiKey, baseUrl } = credentials;
+      
+      const endpoint = `${baseUrl}/message/sendText/${instance}`;
+      
+      // Make sure phone is in correct format (just numbers, no special chars)
+      const cleanPhone = phone.replace(/\D/g, '');
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': apiKey
+        },
+        body: JSON.stringify({
+          number: cleanPhone,
+          options: {
+            delay: 1200,
+            presence: 'composing'
+          },
+          textMessage: {
+            text: content
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to send WhatsApp message:', errorText);
+        return false;
+      }
+      
+      const responseData = await response.json();
+      console.log('WhatsApp message sent successfully:', responseData);
+      return true;
+      
+    } catch (error) {
+      console.error('Error sending WhatsApp message:', error);
+      return false;
+    }
+  };
+
   const sendMessage = async (leadId: string, content: string) => {
     if (!user) return;
     
     try {
+      // Get the lead to access phone number
+      const lead = leads.find(l => l.id === leadId);
+      if (!lead) {
+        toast.error('Lead não encontrado');
+        return;
+      }
+      
       // Insert into Março | Menssagem Bruno
       const { data, error } = await supabase
         .from('Março | Menssagem Bruno')
@@ -600,6 +686,13 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error sending to n8n webhook:', webhookError);
           // Don't toast this error to the user, as it's not critical
         }
+      }
+      
+      // Send via WhatsApp using Evolution API
+      const whatsappSent = await sendWhatsAppMessage(lead.phone, content);
+      if (!whatsappSent) {
+        console.warn('Could not send WhatsApp message via Evolution API');
+        // Don't block the UI with an error toast as this is a secondary channel
       }
       
       toast.success('Mensagem enviada');
