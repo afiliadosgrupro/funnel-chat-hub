@@ -43,6 +43,7 @@ export const convertToLead = (funnelData: any, cadastroData: any = {}): Lead => 
 
 // Convert a message from Março | Menssagem Bruno to our Message type
 export const convertToMessage = (msgData: any): Message => {
+  console.log('Convertendo mensagem:', msgData);
   return {
     id: msgData.id.toString(),
     leadId: msgData.conversation_id,
@@ -198,20 +199,29 @@ export const updateLeadStage = async (leadId: string, stage: FunnelStage): Promi
 // Send and save a message
 export const saveMessage = async (leadId: string, content: string, userName: string): Promise<Message> => {
   try {
+    console.log(`Salvando mensagem para lead ${leadId}: ${content}`);
+    
+    // Construir objeto de dados para inserção
+    const messageData = {
+      conversation_id: leadId,
+      message_content: content,
+      status: 'sent'
+      // Removido campo vendedor que causava erro de RLS
+    };
+    
     // Inserir na tabela Março | Menssagem Bruno
-    // Removido o campo vendedor que não existe
     const { data, error } = await supabase
       .from('Março | Menssagem Bruno')
-      .insert({
-        conversation_id: leadId,
-        message_content: content,
-        status: 'sent'
-        // Removido campo vendedor que causava erro
-      })
+      .insert(messageData)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao inserir mensagem:', error);
+      throw error;
+    }
+    
+    console.log('Mensagem salva com sucesso:', data);
     
     // Criar nova mensagem
     const newMessage: Message = {

@@ -29,7 +29,7 @@ const ChatInterface = () => {
     }
   }, [selectedLead]);
   
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedLead || !messageText.trim()) {
@@ -39,8 +39,13 @@ const ChatInterface = () => {
       return;
     }
     
-    sendMessage(selectedLead.id, messageText.trim());
-    setMessageText('');
+    try {
+      await sendMessage(selectedLead.id, messageText.trim());
+      setMessageText('');
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast.error('Não foi possível enviar a mensagem. Tente novamente.');
+    }
   };
   
   const handleToggleAutomation = () => {

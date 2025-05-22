@@ -17,11 +17,13 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
       
       try {
         setLoading(true);
+        console.log(`Buscando mensagens para lead: ${selectedLeadId}`);
         const loadedMessages = await fetchMessages(selectedLeadId);
         console.log('Mensagens carregadas:', loadedMessages);
         setMessages(loadedMessages);
       } catch (error) {
         console.error('Erro ao carregar mensagens:', error);
+        toast.error('Falha ao carregar mensagens');
       } finally {
         setLoading(false);
       }
@@ -36,23 +38,44 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
       // Verificar se o lead está selecionado
       if (!selectedLead) {
         toast.error('Lead não encontrado');
-        return;
+        return null;
       }
       
       console.log('Enviando mensagem para:', selectedLead.phone, 'conteúdo:', content);
       
+      // Criar uma mensagem temporária para mostrar no chat
+      const tempMessage: Message = {
+        id: `temp-${Date.now()}`,
+        leadId,
+        content,
+        sentAt: new Date().toISOString(),
+        isFromLead: false,
+        isAutomated: false,
+        sentBy: userName,
+      };
+      
+      // Atualizar mensagens locais com a mensagem temporária
+      setMessages(prev => [...prev, tempMessage]);
+      
       // Salvar mensagem no banco de dados
-      // Modificado para não usar o campo 'vendedor' que não existe na tabela
       const newMessage = await saveMessage(leadId, content, userName);
       
-      // Atualizar mensagens locais
-      setMessages(prev => [...prev, newMessage]);
+      // Substituir a mensagem temporária pela mensagem salva
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempMessage.id ? newMessage : msg
+      ));
       
       // Enviar para webhook n8n se configurado
-      await sendToN8nWebhook(leadId, content, userName, newMessage.sentAt, selectedLead);
+      await sendToN8nWebhook(leadId, content, userName, newMessage.sentAt, selectedLead)
+        .catch(err => console.warn('Erro ao enviar para webhook:', err));
       
       // Enviar via WhatsApp usando Evolution API
-      const whatsappSent = await sendWhatsAppMessage(selectedLead.phone, content);
+      const whatsappSent = await sendWhatsAppMessage(selectedLead.phone, content)
+        .catch(err => {
+          console.warn('Erro ao enviar WhatsApp:', err);
+          return false;
+        });
+        
       if (!whatsappSent) {
         console.warn('Não foi possível enviar mensagem de WhatsApp via Evolution API');
       }
@@ -63,7 +86,7 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast.error('Erro ao enviar mensagem');
-      throw error;
+      return null;
     }
   };
 
