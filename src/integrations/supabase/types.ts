@@ -108,6 +108,48 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message_type: string | null
+          metadata: Json | null
+          sender_id: string | null
+          sender_name: string | null
+          sender_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_type?: string | null
+          metadata?: Json | null
+          sender_id?: string | null
+          sender_name?: string | null
+          sender_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_type?: string | null
+          metadata?: Json | null
+          sender_id?: string | null
+          sender_name?: string | null
+          sender_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           conversation_id: number

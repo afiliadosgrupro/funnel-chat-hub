@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, Message, FunnelStage } from '@/types/lead';
 import { toast } from 'sonner';
@@ -40,17 +39,17 @@ export const convertToLead = (funnelData: any, cadastroData: any = {}, lastMessa
   };
 };
 
-// Convert a message from Março | Menssagem Bruno to our Message type
+// Convert a message from chat_messages to our Message type
 export const convertToMessage = (msgData: any): Message => {
   console.log('Convertendo mensagem:', msgData);
   return {
     id: msgData.id.toString(),
     leadId: msgData.conversation_id,
-    content: msgData.message_content || '',
+    content: msgData.content || '',
     sentAt: msgData.created_at,
-    isFromLead: msgData.status === 'received',
-    isAutomated: false, // Não temos essa info na tabela
-    sentBy: msgData.nome_remente || undefined
+    isFromLead: msgData.sender_type === 'user',
+    isAutomated: msgData.sender_type === 'system',
+    sentBy: msgData.sender_name || undefined
   };
 };
 
@@ -114,9 +113,9 @@ export const fetchMessages = async (leadId: string): Promise<Message[]> => {
   try {
     console.log('Buscando mensagens para lead:', leadId);
     
-    // Fetch messages from Março | Menssagem Bruno usando conversation_id para parear
+    // Fetch messages from chat_messages using conversation_id
     const { data: messagesData, error: messagesError } = await supabase
-      .from('Março | Menssagem Bruno')
+      .from('chat_messages')
       .select('*')
       .eq('conversation_id', leadId)
       .order('created_at', { ascending: true });
@@ -217,17 +216,20 @@ export const saveMessage = async (leadId: string, content: string, userName: str
   try {
     console.log(`Salvando mensagem para lead ${leadId}: ${content}`);
     
-    // Construir objeto de dados para inserção usando conversation_id corretamente
+    // Estrutura de dados para a tabela chat_messages
     const messageData = {
       conversation_id: leadId,
-      message_content: content,
-      status: 'sent',
-      nome_remente: userName
+      content: content,
+      sender_type: 'agent',
+      sender_name: userName,
+      sender_id: 'agent_001',
+      message_type: 'text',
+      is_read: true
     };
     
-    // Inserir na tabela Março | Menssagem Bruno
+    // Inserir na tabela chat_messages
     const { data, error } = await supabase
-      .from('Março | Menssagem Bruno')
+      .from('chat_messages')
       .insert(messageData)
       .select()
       .single();
@@ -241,7 +243,7 @@ export const saveMessage = async (leadId: string, content: string, userName: str
     
     // Criar nova mensagem
     const newMessage: Message = {
-      id: data.id.toString(),
+      id: data.id,
       leadId,
       content,
       sentAt: data.created_at,

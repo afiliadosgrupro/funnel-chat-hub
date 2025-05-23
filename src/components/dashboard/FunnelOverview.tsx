@@ -59,10 +59,10 @@ const FunnelOverview = () => {
       
       if (cadastroError) throw cadastroError;
       
-      // Buscar as últimas mensagens de cada conversa usando conversation_id
+      // Buscar as últimas mensagens da tabela chat_messages
       const { data: messagesData, error: messagesError } = await supabase
-        .from('Março | Menssagem Bruno')
-        .select('conversation_id, message_content, created_at')
+        .from('chat_messages')
+        .select('conversation_id, content, created_at')
         .order('created_at', { ascending: false });
       
       if (messagesError) throw messagesError;
@@ -76,12 +76,12 @@ const FunnelOverview = () => {
         });
       });
       
-      // Criar um mapa com as últimas mensagens por conversa usando conversation_id
+      // Criar um mapa com as últimas mensagens por conversa
       const lastMessagesMap = new Map();
       messagesData.forEach(msg => {
         if (!lastMessagesMap.has(msg.conversation_id)) {
           lastMessagesMap.set(msg.conversation_id, {
-            content: msg.message_content,
+            content: msg.content,
             timestamp: msg.created_at
           });
         }
