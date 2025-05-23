@@ -57,7 +57,7 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
       // Atualizar mensagens locais com a mensagem temporária
       setMessages(prev => [...prev, tempMessage]);
       
-      // Salvar mensagem no banco de dados
+      // Salvar mensagem no banco de dados usando conversation_id
       const newMessage = await saveMessage(leadId, content, userName);
       
       // Substituir a mensagem temporária pela mensagem salva

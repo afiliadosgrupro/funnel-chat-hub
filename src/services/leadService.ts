@@ -114,7 +114,7 @@ export const fetchMessages = async (leadId: string): Promise<Message[]> => {
   try {
     console.log('Buscando mensagens para lead:', leadId);
     
-    // Fetch messages from Março | Menssagem Bruno
+    // Fetch messages from Março | Menssagem Bruno usando conversation_id para parear
     const { data: messagesData, error: messagesError } = await supabase
       .from('Março | Menssagem Bruno')
       .select('*')
@@ -217,7 +217,7 @@ export const saveMessage = async (leadId: string, content: string, userName: str
   try {
     console.log(`Salvando mensagem para lead ${leadId}: ${content}`);
     
-    // Construir objeto de dados para inserção
+    // Construir objeto de dados para inserção usando conversation_id corretamente
     const messageData = {
       conversation_id: leadId,
       message_content: content,
