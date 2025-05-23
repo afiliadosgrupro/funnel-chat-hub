@@ -1,9 +1,10 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, Message, FunnelStage } from '@/types/lead';
 import { toast } from 'sonner';
 
 // Convert data from Março | FUNIL Bruno to our Lead type
-export const convertToLead = (funnelData: any, cadastroData: any = {}): Lead => {
+export const convertToLead = (funnelData: any, cadastroData: any = {}, lastMessage: any = null): Lead => {
   // Map the funil value to our FunnelStage type
   const stageMappings: Record<string, FunnelStage> = {
     'Apresentação': 'initial',
@@ -25,10 +26,8 @@ export const convertToLead = (funnelData: any, cadastroData: any = {}): Lead => 
     stageUpdatedAt: funnelData.created_at || new Date().toISOString(),
     assignedTo: funnelData.vendedor || null,
     isHot: stage === 'negotiation' || stage === 'objection',
-    lastMessageAt: funnelData.ULTIMA_INTERACAO_CLIENTE || funnelData.created_at || new Date().toISOString(),
-    lastMessage: funnelData.HISTORICO_CONVERSA ? 
-      funnelData.HISTORICO_CONVERSA.split('\n').slice(-1)[0] || 'Nova conversa' : 
-      'Nova conversa',
+    lastMessageAt: lastMessage?.created_at || funnelData.created_at || new Date().toISOString(),
+    lastMessage: lastMessage?.message_content || 'Nova conversa',
     symptoms: funnelData['Sintomas Extração'] ? 
       funnelData['Sintomas Extração'].split(',').map((s: string) => s.trim()) : 
       [],
@@ -51,7 +50,7 @@ export const convertToMessage = (msgData: any): Message => {
     sentAt: msgData.created_at,
     isFromLead: msgData.status === 'received',
     isAutomated: false, // Não temos essa info na tabela
-    sentBy: undefined // Não temos essa info na tabela
+    sentBy: msgData.nome_remente || undefined
   };
 };
 
@@ -73,16 +72,33 @@ export const fetchLeads = async (): Promise<Lead[]> => {
     
     if (cadastroError) throw cadastroError;
     
+    // Fetch last messages from Março | Menssagem Bruno
+    const { data: messagesData, error: messagesError } = await supabase
+      .from('Março | Menssagem Bruno')
+      .select('conversation_id, message_content, created_at')
+      .order('created_at', { ascending: false });
+    
+    if (messagesError) throw messagesError;
+    
     // Create a map of cadastro data by ID for quick lookup
     const cadastroMap = new Map();
     cadastroData.forEach((item: any) => {
       cadastroMap.set(item.id, item);
     });
     
+    // Create a map of last messages by conversation_id
+    const lastMessagesMap = new Map();
+    messagesData.forEach((msg: any) => {
+      if (!lastMessagesMap.has(msg.conversation_id)) {
+        lastMessagesMap.set(msg.conversation_id, msg);
+      }
+    });
+    
     // Convert the data to our Lead format
     const leadsList: Lead[] = funnelData.map((funnel: any) => {
       const cadastro = cadastroMap.get(funnel.id);
-      return convertToLead(funnel, cadastro);
+      const lastMessage = lastMessagesMap.get(funnel.id);
+      return convertToLead(funnel, cadastro, lastMessage);
     });
     
     return leadsList;
@@ -205,8 +221,8 @@ export const saveMessage = async (leadId: string, content: string, userName: str
     const messageData = {
       conversation_id: leadId,
       message_content: content,
-      status: 'sent'
-      // Removido campo vendedor que causava erro de RLS
+      status: 'sent',
+      nome_remente: userName
     };
     
     // Inserir na tabela Março | Menssagem Bruno
@@ -234,7 +250,7 @@ export const saveMessage = async (leadId: string, content: string, userName: str
       sentBy: userName,
     };
     
-    // Atualizar em Março | FUNIL Bruno
+    // Atualizar histórico em Março | FUNIL Bruno (opcional, manter compatibilidade)
     await supabase
       .from('Março | FUNIL Bruno')
       .update({ 

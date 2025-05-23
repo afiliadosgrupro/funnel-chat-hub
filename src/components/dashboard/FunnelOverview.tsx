@@ -15,7 +15,8 @@ interface Conversation {
   phone?: string;
   funil?: string;
   created_at?: string;
-  ULTIMA_INTERACAO_CLIENTE?: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
 }
 
 const stageBadgeColors = {
@@ -58,6 +59,14 @@ const FunnelOverview = () => {
       
       if (cadastroError) throw cadastroError;
       
+      // Buscar as últimas mensagens de cada conversa
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('Março | Menssagem Bruno')
+        .select('conversation_id, message_content, created_at')
+        .order('created_at', { ascending: false });
+      
+      if (messagesError) throw messagesError;
+      
       // Criar um mapa com os dados do cadastro
       const cadastroMap = new Map();
       cadastroData.forEach(item => {
@@ -67,16 +76,30 @@ const FunnelOverview = () => {
         });
       });
       
+      // Criar um mapa com as últimas mensagens por conversa
+      const lastMessagesMap = new Map();
+      messagesData.forEach(msg => {
+        if (!lastMessagesMap.has(msg.conversation_id)) {
+          lastMessagesMap.set(msg.conversation_id, {
+            content: msg.message_content,
+            timestamp: msg.created_at
+          });
+        }
+      });
+      
       // Combinar dados
       const conversations = funnelData.map(funnel => {
         const cadastro = cadastroMap.get(funnel.id) || {};
+        const lastMessage = lastMessagesMap.get(funnel.id);
+        
         return {
           id: funnel.id,
           nome: cadastro.nome || 'Sem nome',
           phone: cadastro.phone || funnel.phone || 'Sem telefone',
           funil: funnel.funil || 'Apresentação',
           created_at: funnel.created_at,
-          ULTIMA_INTERACAO_CLIENTE: funnel.ULTIMA_INTERACAO_CLIENTE
+          lastMessage: lastMessage?.content || 'Nenhuma mensagem',
+          lastMessageAt: lastMessage?.timestamp || funnel.created_at
         };
       });
       
@@ -171,18 +194,22 @@ const FunnelOverview = () => {
                 onClick={() => handleSelectLead(conv.id)}
               >
                 <div className="px-4 py-3">
-                  <div className="flex justify-between">
-                    <h4 className="font-medium truncate">{conv.nome}</h4>
-                    <Badge className={cn("text-xs", stageBadgeColors[conv.funil as keyof typeof stageBadgeColors] || stageBadgeColors.default)}>
-                      {conv.funil}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">{conv.phone}</div>
-                  <div className="flex justify-between mt-1 text-xs text-gray-500">
-                    <span>{formatDate(conv.created_at)}</span>
-                    {conv.ULTIMA_INTERACAO_CLIENTE && (
-                      <span>Última interação: {formatDate(conv.ULTIMA_INTERACAO_CLIENTE)}</span>
-                    )}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <h4 className="font-medium truncate">{conv.nome}</h4>
+                        <Badge className={cn("text-xs ml-2", stageBadgeColors[conv.funil as keyof typeof stageBadgeColors] || stageBadgeColors.default)}>
+                          {conv.funil}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-1">{conv.phone}</div>
+                      <div className="text-sm text-gray-500 truncate mb-1">
+                        {conv.lastMessage}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {formatDate(conv.lastMessageAt)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </li>
