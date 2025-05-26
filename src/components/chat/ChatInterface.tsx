@@ -14,12 +14,19 @@ const ChatInterface = () => {
   const [showProfile, setShowProfile] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Scroll to bottom on new messages and when messages load
+  // Scroll to bottom when messages change or load
   useEffect(() => {
-    if (messagesEndRef.current && messages.length > 0) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [messages, selectedLead]);
   
   // Log de debug quando um lead é selecionado
   useEffect(() => {
