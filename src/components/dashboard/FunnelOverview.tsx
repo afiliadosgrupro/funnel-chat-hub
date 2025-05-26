@@ -4,10 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useLeads } from '@/contexts/LeadContext';
 import { cn } from '@/lib/utils';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, Calendar, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Conversation {
   id: string;
@@ -17,6 +23,14 @@ interface Conversation {
   created_at?: string;
   lastMessage?: string;
   lastMessageAt?: string;
+}
+
+interface Filters {
+  search: string;
+  phone: string;
+  funil: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 const stageBadgeColors = {
@@ -30,15 +44,37 @@ const stageBadgeColors = {
   'default': 'bg-gray-500'
 };
 
+const funnelStages = [
+  'Apresentação',
+  'Identificação', 
+  'Conscientização',
+  'Validação',
+  'Negociação',
+  'Objeção',
+  'Compra'
+];
+
 const FunnelOverview = () => {
   const { updateFilters, filters, setSelectedLeadId, selectedLeadId } = useLeads();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localFilters, setLocalFilters] = useState<Filters>({
+    search: '',
+    phone: '',
+    funil: ''
+  });
   
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  // Auto-selecionar a conversa mais recente quando os dados são carregados
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedLeadId) {
+      const mostRecent = conversations[0]; // Já está ordenado por data mais recente
+      setSelectedLeadId(mostRecent.id);
+    }
+  }, [conversations, selectedLeadId, setSelectedLeadId]);
   
   const fetchConversations = async () => {
     setLoading(true);
@@ -59,7 +95,7 @@ const FunnelOverview = () => {
       
       if (cadastroError) throw cadastroError;
       
-      // Buscar as últimas mensagens da tabela chat_messages
+      // Buscar as últimas mensagens da tabela chat_messages ordenadas por data mais recente
       const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
         .select('conversation_id, content, created_at')
@@ -87,9 +123,7 @@ const FunnelOverview = () => {
         }
       });
       
-      console.log('Mapa de mensagens:', lastMessagesMap);
-      
-      // Combinar dados
+      // Combinar dados e ordenar por última mensagem mais recente
       const conversations = funnelData.map(funnel => {
         const cadastro = cadastroMap.get(funnel.id) || {};
         const lastMessage = lastMessagesMap.get(funnel.id);
@@ -103,6 +137,11 @@ const FunnelOverview = () => {
           lastMessage: lastMessage?.content || 'Nenhuma mensagem',
           lastMessageAt: lastMessage?.timestamp || funnel.created_at
         };
+      }).sort((a, b) => {
+        // Ordenar por última mensagem mais recente
+        const dateA = new Date(a.lastMessageAt || a.created_at || 0);
+        const dateB = new Date(b.lastMessageAt || b.created_at || 0);
+        return dateB.getTime() - dateA.getTime();
       });
       
       setConversations(conversations);
@@ -113,12 +152,43 @@ const FunnelOverview = () => {
       setLoading(false);
     }
   };
-  
-  const filteredConversations = searchQuery 
-    ? conversations.filter(conv => 
-        conv.nome?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        conv.phone?.includes(searchQuery))
-    : conversations;
+
+  // Aplicar filtros
+  const filteredConversations = conversations.filter(conv => {
+    // Filtro por busca (nome)
+    if (localFilters.search && !conv.nome?.toLowerCase().includes(localFilters.search.toLowerCase())) {
+      return false;
+    }
+    
+    // Filtro por telefone
+    if (localFilters.phone && !conv.phone?.includes(localFilters.phone)) {
+      return false;
+    }
+    
+    // Filtro por funil
+    if (localFilters.funil && conv.funil !== localFilters.funil) {
+      return false;
+    }
+    
+    // Filtro por data
+    if (localFilters.dateFrom || localFilters.dateTo) {
+      const convDate = new Date(conv.lastMessageAt || conv.created_at || 0);
+      
+      if (localFilters.dateFrom) {
+        const fromDate = new Date(localFilters.dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (convDate < fromDate) return false;
+      }
+      
+      if (localFilters.dateTo) {
+        const toDate = new Date(localFilters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (convDate > toDate) return false;
+      }
+    }
+    
+    return true;
+  });
   
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -135,31 +205,107 @@ const FunnelOverview = () => {
     }
   };
   
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-  
   const handleSelectLead = (leadId: string) => {
     console.log('Selecionando lead:', leadId);
     setSelectedLeadId(leadId);
   };
+
+  const clearFilters = () => {
+    setLocalFilters({
+      search: '',
+      phone: '',
+      funil: ''
+    });
+  };
+
+  const hasActiveFilters = localFilters.search || localFilters.phone || localFilters.funil || localFilters.dateFrom || localFilters.dateTo;
   
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-medium">Conversas</CardTitle>
-        <form onSubmit={handleSearchSubmit} className="mt-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="search"
-              placeholder="Buscar conversas..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </form>
+        
+        {/* Busca por nome */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            type="search"
+            placeholder="Buscar por nome..."
+            className="pl-8"
+            value={localFilters.search}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, search: e.target.value }))}
+          />
+        </div>
+
+        {/* Filtros adicionais */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Busca por telefone */}
+          <Input
+            type="search"
+            placeholder="Buscar por número..."
+            value={localFilters.phone}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, phone: e.target.value }))}
+          />
+
+          {/* Filtro por funil */}
+          <Select value={localFilters.funil} onValueChange={(value) => setLocalFilters(prev => ({ ...prev, funil: value === 'all' ? '' : value }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos os funis" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os funis</SelectItem>
+              {funnelStages.map(stage => (
+                <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Filtros de data */}
+        <div className="grid grid-cols-2 gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start text-left font-normal">
+                <Calendar className="mr-2 h-4 w-4" />
+                {localFilters.dateFrom ? format(localFilters.dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent
+                mode="single"
+                selected={localFilters.dateFrom}
+                onSelect={(date) => setLocalFilters(prev => ({ ...prev, dateFrom: date }))}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start text-left font-normal">
+                <Calendar className="mr-2 h-4 w-4" />
+                {localFilters.dateTo ? format(localFilters.dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent
+                mode="single"
+                selected={localFilters.dateTo}
+                onSelect={(date) => setLocalFilters(prev => ({ ...prev, dateTo: date }))}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Botão para limpar filtros */}
+        {hasActiveFilters && (
+          <Button variant="outline" size="sm" onClick={clearFilters} className="self-start">
+            <Filter className="mr-2 h-4 w-4" />
+            Limpar filtros
+          </Button>
+        )}
+        
         <div className="flex items-center justify-between mt-2">
           <span className="text-sm text-muted-foreground">
             {filteredConversations.length} conversas
@@ -173,6 +319,7 @@ const FunnelOverview = () => {
           </button>
         </div>
       </CardHeader>
+      
       <CardContent className="flex-1 overflow-y-auto custom-scrollbar p-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -182,7 +329,7 @@ const FunnelOverview = () => {
           <div className="flex flex-col items-center justify-center text-center p-8 h-full">
             <Search className="h-12 w-12 text-gray-400 mb-2" />
             <h3 className="text-lg font-medium text-gray-900">Nenhuma conversa encontrada</h3>
-            <p className="text-gray-500">Tente ajustar sua busca</p>
+            <p className="text-gray-500">Tente ajustar seus filtros</p>
           </div>
         ) : (
           <ul className="divide-y">

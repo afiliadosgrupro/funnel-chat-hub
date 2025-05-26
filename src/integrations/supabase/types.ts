@@ -121,6 +121,7 @@ export type Database = {
           sender_name: string | null
           sender_type: string
           updated_at: string | null
+          vendedor_user: string | null
         }
         Insert: {
           content: string
@@ -134,6 +135,7 @@ export type Database = {
           sender_name?: string | null
           sender_type: string
           updated_at?: string | null
+          vendedor_user?: string | null
         }
         Update: {
           content?: string
@@ -147,6 +149,7 @@ export type Database = {
           sender_name?: string | null
           sender_type?: string
           updated_at?: string | null
+          vendedor_user?: string | null
         }
         Relationships: []
       }
