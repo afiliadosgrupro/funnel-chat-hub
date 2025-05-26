@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useLeads } from '@/contexts/LeadContext';
 import { Button } from '@/components/ui/button';
@@ -15,9 +14,9 @@ const ChatInterface = () => {
   const [showProfile, setShowProfile] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages and when messages load
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && messages.length > 0) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
@@ -102,7 +101,7 @@ const ChatInterface = () => {
           </div>
           <div className="flex gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs opacity-75">Atualiza a cada 10s</span>
+              <span className="text-xs opacity-75">Atualiza a cada 30s</span>
               <button 
                 onClick={handleManualRefresh} 
                 className="text-white hover:bg-whatsapp-dark transition-colors p-1 rounded"
