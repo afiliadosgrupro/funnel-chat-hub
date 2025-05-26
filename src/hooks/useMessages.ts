@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Message } from '@/types/lead';
 import { toast } from 'sonner';
 import { fetchMessages, saveMessage } from '@/services/leadService';
@@ -9,6 +9,7 @@ import { sendToN8nWebhook } from '@/services/webhookService';
 export const useMessages = (selectedLeadId: string | null, selectedLead: any) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Carrega as mensagens quando um lead é selecionado
   useEffect(() => {
@@ -29,7 +30,31 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
       }
     };
 
-    loadMessages();
+    // Limpar interval anterior
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (selectedLeadId) {
+      loadMessages();
+      
+      // Configurar atualização automática a cada 10 segundos
+      intervalRef.current = setInterval(() => {
+        console.log('Atualizando mensagens automaticamente...');
+        loadMessages();
+      }, 10000);
+    } else {
+      setMessages([]);
+    }
+
+    // Cleanup do interval quando o lead mudar ou componente desmontar
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [selectedLeadId]);
 
   // Função para enviar uma mensagem
@@ -90,10 +115,25 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
     }
   };
 
+  const refreshMessages = async () => {
+    if (!selectedLeadId) return;
+    
+    try {
+      console.log('Atualizando mensagens manualmente...');
+      const loadedMessages = await fetchMessages(selectedLeadId);
+      setMessages(loadedMessages);
+      toast.success('Mensagens atualizadas');
+    } catch (error) {
+      console.error('Erro ao atualizar mensagens:', error);
+      toast.error('Erro ao atualizar mensagens');
+    }
+  };
+
   return {
     messages,
     loading,
     sendMessage,
-    setMessages
+    setMessages,
+    refreshMessages
   };
 };

@@ -35,6 +35,7 @@ interface LeadContextType {
   toggleAutomation: (leadId: string) => Promise<void>;
   updateLeadStage: (leadId: string, stage: FunnelStage) => Promise<void>;
   refreshLeads: () => Promise<void>;
+  refreshMessages: () => Promise<void>;
 }
 
 const LeadContext = createContext<LeadContextType | undefined>(undefined);
@@ -60,7 +61,8 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     messages, 
     loading: messagesLoading, 
     sendMessage: hookSendMessage,
-    setMessages 
+    setMessages,
+    refreshMessages: hookRefreshMessages
   } = useMessages(selectedLeadId, selectedLead);
 
   // Update loading state from messages hook
@@ -183,6 +185,10 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshMessages = async () => {
+    await hookRefreshMessages();
+  };
+
   const contextValue = {
     leads,
     filteredLeads,
@@ -198,6 +204,7 @@ export const LeadProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toggleAutomation,
     updateLeadStage,
     refreshLeads,
+    refreshMessages,
   };
 
   return (

@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLeads } from '@/contexts/LeadContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, PauseCircle, PlayCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Send, PauseCircle, PlayCircle, ChevronRight, ChevronLeft, RefreshCw } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import LeadProfile from './LeadProfile';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,11 @@ const ChatInterface = () => {
     }
     toggleAutomation(selectedLead.id);
   };
+
+  const handleManualRefresh = () => {
+    // Triggering a refresh by calling the refresh function from context
+    window.location.reload();
+  };
   
   // Templates para respostas rápidas
   const messageTemplates = [
@@ -96,6 +101,16 @@ const ChatInterface = () => {
             <span className="ml-2 text-xs opacity-75">({selectedLead.phone})</span>
           </div>
           <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs opacity-75">Atualiza a cada 10s</span>
+              <button 
+                onClick={handleManualRefresh} 
+                className="text-white hover:bg-whatsapp-dark transition-colors p-1 rounded"
+                title="Atualizar mensagens"
+              >
+                <RefreshCw className={`h-4 w-4`} />
+              </button>
+            </div>
             <Button 
               variant="ghost" 
               size="sm" 
