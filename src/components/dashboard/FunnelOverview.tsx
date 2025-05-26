@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useLeads } from '@/contexts/LeadContext';
@@ -64,8 +63,22 @@ const FunnelOverview = () => {
     funil: ''
   });
   
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     fetchConversations();
+    
+    // Configurar atualização automática a cada 10 segundos
+    intervalRef.current = setInterval(() => {
+      fetchConversations();
+    }, 10000);
+    
+    // Cleanup do interval quando o componente for desmontado
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   // Auto-selecionar a conversa mais recente quando os dados são carregados
@@ -77,7 +90,10 @@ const FunnelOverview = () => {
   }, [conversations, selectedLeadId, setSelectedLeadId]);
   
   const fetchConversations = async () => {
-    setLoading(true);
+    // Não mostrar loading se for uma atualização automática e já temos dados
+    if (conversations.length === 0) {
+      setLoading(true);
+    }
     
     try {
       // Buscar dados das tabelas Março | FUNIL Bruno e Março | Cadastro Bruno
@@ -153,7 +169,11 @@ const FunnelOverview = () => {
     }
   };
 
-  // Aplicar filtros
+  const handleManualRefresh = () => {
+    fetchConversations();
+    toast.success('Conversas atualizadas');
+  };
+
   const filteredConversations = conversations.filter(conv => {
     // Filtro por busca (nome)
     if (localFilters.search && !conv.nome?.toLowerCase().includes(localFilters.search.toLowerCase())) {
@@ -310,18 +330,22 @@ const FunnelOverview = () => {
           <span className="text-sm text-muted-foreground">
             {filteredConversations.length} conversas
           </span>
-          <button 
-            onClick={fetchConversations} 
-            className="text-gray-400 hover:text-gray-600"
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Atualiza a cada 10s</span>
+            <button 
+              onClick={handleManualRefresh} 
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={loading}
+              title="Atualizar agora"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </CardHeader>
       
       <CardContent className="flex-1 overflow-y-auto custom-scrollbar p-0">
-        {loading ? (
+        {loading && conversations.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <RefreshCw className="h-8 w-8 animate-spin text-whatsapp" />
           </div>
