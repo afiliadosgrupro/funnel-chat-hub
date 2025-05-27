@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { 
   Loader2, Save, Building, MessageSquare, LucideGithub, 
   Facebook, CreditCard, Receipt, ShoppingBag, Sheet 
@@ -199,103 +198,172 @@ const Settings = () => {
   // Fetch user data from Supabase
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('Settings: Nenhum usuário logado');
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        console.log('Settings: Buscando dados para o email:', user.email);
+        
+        // Primeiro, vamos verificar se existe o usuário na tabela SAAS_usuarios
+        const { data, error, count } = await supabase
           .from('SAAS_usuarios')
-          .select('*')
-          .eq('email', user.email)
-          .single();
+          .select('*', { count: 'exact' })
+          .eq('email', user.email);
+
+        console.log('Settings: Resultado da consulta:', { data, error, count });
 
         if (error) {
-          console.error('Erro ao buscar dados do usuário:', error);
-          toast({
-            title: 'Erro',
-            description: 'Não foi possível carregar as configurações do usuário.',
-            variant: 'destructive'
-          });
+          console.error('Settings: Erro ao buscar dados do usuário:', error);
+          
+          // Se não encontrou o usuário, vamos criar um registro básico
+          if (error.code === 'PGRST116') {
+            console.log('Settings: Usuário não encontrado, criando registro básico...');
+            
+            const { data: newUserData, error: insertError } = await supabase
+              .from('SAAS_usuarios')
+              .insert([
+                {
+                  email: user.email,
+                  nome_usuario: user.name || 'Usuário',
+                  senha_hash: 'temp123', // senha temporária
+                  tipo_usuario: 'vendedor',
+                  ativo: true,
+                  produto_principal: 'cha_rmgi'
+                }
+              ])
+              .select()
+              .single();
+
+            if (insertError) {
+              console.error('Settings: Erro ao criar usuário:', insertError);
+              toast.error('Não foi possível criar o perfil do usuário.');
+              return;
+            }
+
+            console.log('Settings: Usuário criado com sucesso:', newUserData);
+            setUserData(newUserData);
+            
+            // Set form values for the new user
+            companyProfileForm.reset({
+              nome_empresa: '',
+              telefone_empresa: '',
+              endereco_empresa: '',
+              produto_principal: 'cha_rmgi',
+              cnpj: ''
+            });
+
+            toast.success('Perfil criado com sucesso! Configure suas informações.');
+          } else {
+            toast.error('Erro ao carregar configurações do usuário.');
+          }
           return;
         }
 
-        if (data) {
-          setUserData(data);
+        if (data && data.length > 0) {
+          const user_data = data[0];
+          console.log('Settings: Dados do usuário encontrados:', user_data);
+          setUserData(user_data);
           
           // Set form values for company profile
           companyProfileForm.reset({
-            nome_empresa: data.nome_empresa || '',
-            telefone_empresa: data.telefone_empresa || '',
-            endereco_empresa: data.endereco_empresa || '',
-            produto_principal: data.produto_principal || 'cha_rmgi',
-            cnpj: data.cnpj || ''
+            nome_empresa: user_data.nome_empresa || '',
+            telefone_empresa: user_data.telefone_empresa || '',
+            endereco_empresa: user_data.endereco_empresa || '',
+            produto_principal: user_data.produto_principal || 'cha_rmgi',
+            cnpj: user_data.cnpj || ''
           });
 
           // Set form values for WhatsApp
           whatsappForm.reset({
-            whatsapp_url_servidor: data.whatsapp_url_servidor || '',
-            whatsapp_api_key: data.whatsapp_api_key || '',
-            whatsapp_instancia: data.whatsapp_instancia || '',
-            whatsapp_numero: data.whatsapp_numero || '',
-            whatsapp_webhook_url: data.whatsapp_webhook_url || '',
-            whatsapp_webhook_conectado: data.whatsapp_webhook_conectado || false,
-            whatsapp_status: data.whatsapp_status || 'desconectado',
-            whatsapp_nome_perfil: data.whatsapp_nome_perfil || ''
+            whatsapp_url_servidor: user_data.whatsapp_url_servidor || '',
+            whatsapp_api_key: user_data.whatsapp_api_key || '',
+            whatsapp_instancia: user_data.whatsapp_instancia || '',
+            whatsapp_numero: user_data.whatsapp_numero || '',
+            whatsapp_webhook_url: user_data.whatsapp_webhook_url || '',
+            whatsapp_webhook_conectado: user_data.whatsapp_webhook_conectado || false,
+            whatsapp_status: user_data.whatsapp_status || 'desconectado',
+            whatsapp_nome_perfil: user_data.whatsapp_nome_perfil || ''
           });
 
           // Set form values for OpenAI
           openaiForm.reset({
-            openai_token: data.openai_token || '',
-            openai_assistente_id: data.openai_assistente_id || '',
-            openai_modelo_preferido: data.openai_modelo_preferido || 'gpt-4',
-            openai_ativo: data.openai_ativo || false
+            openai_token: user_data.openai_token || '',
+            openai_assistente_id: user_data.openai_assistente_id || '',
+            openai_modelo_preferido: user_data.openai_modelo_preferido || 'gpt-4',
+            openai_ativo: user_data.openai_ativo || false
           });
           
           // Set form values for Facebook
           facebookForm.reset({
-            facebook_token_pagina: data.facebook_token_pagina || '',
-            facebook_token_usuario: data.facebook_token_usuario || '',
-            facebook_token_api: data.facebook_token_api || '',
-            facebook_pixel_id: data.facebook_pixel_id || '',
-            facebook_app_id: data.facebook_app_id || '',
-            facebook_ativo: data.facebook_ativo || false
+            facebook_token_pagina: user_data.facebook_token_pagina || '',
+            facebook_token_usuario: user_data.facebook_token_usuario || '',
+            facebook_token_api: user_data.facebook_token_api || '',
+            facebook_pixel_id: user_data.facebook_pixel_id || '',
+            facebook_app_id: user_data.facebook_app_id || '',
+            facebook_ativo: user_data.facebook_ativo || false
           });
           
           // Set form values for Braip
           braipForm.reset({
-            braip_webhook_url: data.braip_webhook_url || '',
-            braip_token: data.braip_token || '',
-            braip_ativo: data.braip_ativo || false
+            braip_webhook_url: user_data.braip_webhook_url || '',
+            braip_token: user_data.braip_token || '',
+            braip_ativo: user_data.braip_ativo || false
           });
           
           // Set form values for Keed
           keedForm.reset({
-            keed_webhook_url: data.keed_webhook_url || '',
-            keed_token: data.keed_token || '',
-            keed_ativo: data.keed_ativo || false
+            keed_webhook_url: user_data.keed_webhook_url || '',
+            keed_token: user_data.keed_token || '',
+            keed_ativo: user_data.keed_ativo || false
           });
           
           // Set form values for Payt
           paytForm.reset({
-            payt_webhook_url: data.payt_webhook_url || '',
-            payt_token: data.payt_token || '',
-            payt_ativo: data.payt_ativo || false
+            payt_webhook_url: user_data.payt_webhook_url || '',
+            payt_token: user_data.payt_token || '',
+            payt_ativo: user_data.payt_ativo || false
           });
           
           // Set form values for Google Sheets
           googleSheetsForm.reset({
-            google_sheets_token: data.google_sheets_token || '',
-            google_sheets_id_planilha: data.google_sheets_id_planilha || '',
-            google_sheets_ativo: data.google_sheets_ativo || false
+            google_sheets_token: user_data.google_sheets_token || '',
+            google_sheets_id_planilha: user_data.google_sheets_id_planilha || '',
+            google_sheets_ativo: user_data.google_sheets_ativo || false
           });
+        } else {
+          console.log('Settings: Nenhum dado encontrado para o usuário');
+          // Criar usuário se não existir
+          const { data: newUserData, error: insertError } = await supabase
+            .from('SAAS_usuarios')
+            .insert([
+              {
+                email: user.email,
+                nome_usuario: user.name || 'Usuário',
+                senha_hash: 'temp123',
+                tipo_usuario: 'vendedor',
+                ativo: true,
+                produto_principal: 'cha_rmgi'
+              }
+            ])
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Settings: Erro ao criar usuário:', insertError);
+            toast.error('Não foi possível criar o perfil do usuário.');
+            return;
+          }
+
+          setUserData(newUserData);
+          toast.success('Perfil criado! Configure suas informações.');
         }
       } catch (error) {
-        console.error('Erro ao processar dados:', error);
-        toast({
-          title: 'Erro',
-          description: 'Ocorreu um erro ao processar os dados.',
-          variant: 'destructive'
-        });
+        console.error('Settings: Erro ao processar dados:', error);
+        toast.error('Ocorreu um erro ao processar os dados.');
       } finally {
         setLoading(false);
       }
@@ -306,7 +374,7 @@ const Settings = () => {
 
   // Handle company profile form submission
   const onSubmitCompanyProfile = async (values: CompanyProfileFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -321,23 +389,16 @@ const Settings = () => {
           cnpj: values.cnpj,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Perfil da empresa atualizado com sucesso.',
-      });
+      toast.success('Perfil da empresa atualizado com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar o perfil da empresa.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar o perfil da empresa.');
     } finally {
       setLoading(false);
     }
@@ -345,7 +406,7 @@ const Settings = () => {
 
   // Handle WhatsApp form submission
   const onSubmitWhatsapp = async (values: WhatsappFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -363,23 +424,16 @@ const Settings = () => {
           whatsapp_nome_perfil: values.whatsapp_nome_perfil,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações do WhatsApp atualizadas com sucesso.',
-      });
+      toast.success('Configurações do WhatsApp atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações do WhatsApp:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações do WhatsApp.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações do WhatsApp.');
     } finally {
       setLoading(false);
     }
@@ -387,7 +441,7 @@ const Settings = () => {
 
   // Handle OpenAI form submission
   const onSubmitOpenAI = async (values: OpenAIFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -401,23 +455,16 @@ const Settings = () => {
           openai_ativo: values.openai_ativo,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações da OpenAI atualizadas com sucesso.',
-      });
+      toast.success('Configurações da OpenAI atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações da OpenAI:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações da OpenAI.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações da OpenAI.');
     } finally {
       setLoading(false);
     }
@@ -425,7 +472,7 @@ const Settings = () => {
   
   // Handle Facebook form submission
   const onSubmitFacebook = async (values: FacebookFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -441,23 +488,16 @@ const Settings = () => {
           facebook_ativo: values.facebook_ativo,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações do Facebook atualizadas com sucesso.',
-      });
+      toast.success('Configurações do Facebook atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações do Facebook:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações do Facebook.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações do Facebook.');
     } finally {
       setLoading(false);
     }
@@ -465,7 +505,7 @@ const Settings = () => {
   
   // Handle Braip form submission
   const onSubmitBraip = async (values: BraipFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -478,23 +518,16 @@ const Settings = () => {
           braip_ativo: values.braip_ativo,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações da Braip atualizadas com sucesso.',
-      });
+      toast.success('Configurações da Braip atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações da Braip:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações da Braip.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações da Braip.');
     } finally {
       setLoading(false);
     }
@@ -502,7 +535,7 @@ const Settings = () => {
   
   // Handle Keed form submission
   const onSubmitKeed = async (values: KeedFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -515,23 +548,16 @@ const Settings = () => {
           keed_ativo: values.keed_ativo,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações da Keed atualizadas com sucesso.',
-      });
+      toast.success('Configurações da Keed atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações da Keed:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações da Keed.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações da Keed.');
     } finally {
       setLoading(false);
     }
@@ -539,7 +565,7 @@ const Settings = () => {
   
   // Handle Payt form submission
   const onSubmitPayt = async (values: PaytFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -552,23 +578,16 @@ const Settings = () => {
           payt_ativo: values.payt_ativo,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações da Payt atualizadas com sucesso.',
-      });
+      toast.success('Configurações da Payt atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações da Payt:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações da Payt.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações da Payt.');
     } finally {
       setLoading(false);
     }
@@ -576,7 +595,7 @@ const Settings = () => {
   
   // Handle Google Sheets form submission
   const onSubmitGoogleSheets = async (values: GoogleSheetsFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     
     try {
       setLoading(true);
@@ -589,23 +608,16 @@ const Settings = () => {
           google_sheets_ativo: values.google_sheets_ativo,
           data_alteracao: new Date().toISOString()
         })
-        .eq('email', user.email);
+        .eq('id', userData.id);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações do Google Sheets atualizadas com sucesso.',
-      });
+      toast.success('Configurações do Google Sheets atualizadas com sucesso.');
     } catch (error: any) {
       console.error('Erro ao atualizar configurações do Google Sheets:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar as configurações do Google Sheets.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível atualizar as configurações do Google Sheets.');
     } finally {
       setLoading(false);
     }
