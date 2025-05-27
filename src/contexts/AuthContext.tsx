@@ -27,6 +27,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const navigate = useNavigate();
 
+  // Define logout function early to avoid hoisting issues
+  const logout = () => {
+    authStorage.clearAuth();
+    
+    setState({
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+      error: null,
+    });
+    
+    navigate('/login');
+  };
+
   // Check for stored authentication on component mount
   useEffect(() => {
     const checkAuth = () => {
@@ -47,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, []);
 
-  // Auto logout on inactivity
+  // Auto logout on inactivity - now logout is defined
   useInactivityTimer({
     isAuthenticated: state.isAuthenticated,
     onTimeout: logout
@@ -91,19 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: `Bem-vindo, ${result.user.name}!`,
       });
     }
-  };
-
-  const logout = () => {
-    authStorage.clearAuth();
-    
-    setState({
-      isAuthenticated: false,
-      user: null,
-      loading: false,
-      error: null,
-    });
-    
-    navigate('/login');
   };
 
   const forgotPassword = async (email: string) => {
