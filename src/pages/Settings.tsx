@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -232,7 +233,7 @@ const Settings = () => {
                 tipo_usuario: 'vendedor',
                 ativo: true,
                 produto_principal: 'cha_rmgi'
-              })
+              } as any)
               .select()
               .single();
 
@@ -344,7 +345,7 @@ const Settings = () => {
               tipo_usuario: 'vendedor',
               ativo: true,
               produto_principal: 'cha_rmgi'
-            })
+            } as any)
             .select()
             .single();
 
