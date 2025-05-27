@@ -34,9 +34,9 @@ export const authService = {
         return { error: 'Credenciais inválidas ou usuário inativo.' };
       }
 
-      // Verificar senha simples (para teste)
+      // Verificar senha - o hash é aplicado pelo trigger, então comparamos diretamente
       if (data.senha_hash !== password) {
-        console.log('Senha incorreta. Esperado:', data.senha_hash, 'Recebido:', password);
+        console.log('Senha incorreta');
         return { error: 'Credenciais inválidas.' };
       }
 

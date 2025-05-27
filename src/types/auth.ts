@@ -14,6 +14,7 @@ export interface AuthState {
   error: string | null;
 }
 
+// Manter interface de convites para compatibilidade
 export interface ConviteRegistro {
   id: string;
   email: string;

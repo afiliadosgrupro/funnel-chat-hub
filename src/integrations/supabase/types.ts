@@ -1326,33 +1326,45 @@ export type Database = {
           atualizado_em: string | null
           criado_em: string | null
           criado_por: string | null
+          data_nascimento: string | null
           email: string
+          endereco: string | null
           id: string
           nome: string
+          observacoes: string | null
           role: Database["public"]["Enums"]["user_role"]
           senha_hash: string
+          telefone: string | null
         }
         Insert: {
           ativo?: boolean | null
           atualizado_em?: string | null
           criado_em?: string | null
           criado_por?: string | null
+          data_nascimento?: string | null
           email: string
+          endereco?: string | null
           id?: string
           nome: string
+          observacoes?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           senha_hash: string
+          telefone?: string | null
         }
         Update: {
           ativo?: boolean | null
           atualizado_em?: string | null
           criado_em?: string | null
           criado_por?: string | null
+          data_nascimento?: string | null
           email?: string
+          endereco?: string | null
           id?: string
           nome?: string
+          observacoes?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           senha_hash?: string
+          telefone?: string | null
         }
         Relationships: [
           {
@@ -2595,6 +2607,10 @@ export type Database = {
       firebase_fdw_validator: {
         Args: { options: string[]; catalog: unknown }
         Returns: undefined
+      }
+      hash_password: {
+        Args: { password: string }
+        Returns: string
       }
       hello_world_fdw_handler: {
         Args: Record<PropertyKey, never>

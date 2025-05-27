@@ -4,266 +4,190 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { UserPlus, Send, Trash2, Copy } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { UserPlus, Search, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConviteRegistro } from '@/types/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import { SistemaUsuario, CreateUserData, UpdateUserData } from '@/types/user';
+import { userManagementService } from '@/services/userManagementService';
+import UserForm from '@/components/users/UserForm';
+import UsersList from '@/components/users/UsersList';
 
 const UserManagement = () => {
-  const [convites, setConvites] = useState<ConviteRegistro[]>([]);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<SistemaUsuario[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<SistemaUsuario[]>([]);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    role: 'vendedor' as 'dev' | 'admin' | 'vendedor'
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<SistemaUsuario | undefined>();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
-    loadConvites();
+    loadUsers();
   }, []);
 
-  const loadConvites = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('convites_cadastro')
-        .select('*')
-        .order('criado_em', { ascending: false });
-
-      if (error) throw error;
-      setConvites(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar convites:', error);
-      toast.error('Erro ao carregar convites');
+  useEffect(() => {
+    // Filtrar usuários baseado no termo de busca
+    if (searchTerm.trim() === '') {
+      setFilteredUsers(users);
+    } else {
+      const filtered = users.filter(user => 
+        user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.telefone?.includes(searchTerm) ||
+        user.role.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredUsers(filtered);
     }
-  };
+  }, [users, searchTerm]);
 
-  const generateInviteLink = (token: string) => {
-    return `${window.location.origin}/registro/${token}`;
-  };
-
-  const createInvite = async () => {
-    if (!formData.email) {
-      toast.error('Email é obrigatório');
-      return;
-    }
-
-    setLoading(true);
+  const loadUsers = async () => {
     try {
-      const token = crypto.randomUUID();
-      const expiraEm = new Date();
-      expiraEm.setDate(expiraEm.getDate() + 7); // Expira em 7 dias
-
-      const { error } = await supabase
-        .from('convites_cadastro')
-        .insert({
-          email: formData.email.toLowerCase(),
-          role: formData.role,
-          token,
-          expira_em: expiraEm.toISOString(),
-          criado_por: 'temp-user-id' // TODO: Usar ID do usuário logado
-        });
-
-      if (error) throw error;
-
-      const inviteLink = generateInviteLink(token);
-      
-      // Copiar link para clipboard
-      await navigator.clipboard.writeText(inviteLink);
-      
-      toast.success('Convite criado! Link copiado para área de transferência.');
-      
-      setFormData({ email: '', role: 'vendedor' });
-      loadConvites();
+      setLoading(true);
+      const loadedUsers = await userManagementService.getAllUsers();
+      setUsers(loadedUsers);
     } catch (error) {
-      console.error('Erro ao criar convite:', error);
-      toast.error('Erro ao criar convite');
+      console.error('Erro ao carregar usuários:', error);
+      toast.error('Erro ao carregar usuários');
     } finally {
       setLoading(false);
     }
   };
 
-  const copyInviteLink = async (token: string) => {
-    try {
-      const link = generateInviteLink(token);
-      await navigator.clipboard.writeText(link);
-      toast.success('Link copiado para área de transferência!');
-    } catch (error) {
-      toast.error('Erro ao copiar link');
-    }
+  const handleCreateUser = () => {
+    setEditingUser(undefined);
+    setShowForm(true);
   };
 
-  const deleteInvite = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('convites_cadastro')
-        .delete()
-        .eq('id', id);
+  const handleEditUser = (user: SistemaUsuario) => {
+    setEditingUser(user);
+    setShowForm(true);
+  };
 
-      if (error) throw error;
+  const handleSaveUser = async (userData: CreateUserData | UpdateUserData) => {
+    if (!currentUser) return;
+
+    try {
+      setFormLoading(true);
       
-      toast.success('Convite removido');
-      loadConvites();
+      if (editingUser) {
+        // Atualizar usuário existente
+        await userManagementService.updateUser(editingUser.id, userData);
+        toast.success('Usuário atualizado com sucesso!');
+      } else {
+        // Criar novo usuário
+        await userManagementService.createUser(userData as CreateUserData, currentUser.id);
+        toast.success('Usuário criado com sucesso!');
+      }
+      
+      setShowForm(false);
+      setEditingUser(undefined);
+      await loadUsers();
     } catch (error) {
-      console.error('Erro ao remover convite:', error);
-      toast.error('Erro ao remover convite');
+      console.error('Erro ao salvar usuário:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar usuário');
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'dev': return 'destructive';
-      case 'admin': return 'default';
-      case 'vendedor': return 'secondary';
-      default: return 'outline';
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await userManagementService.deleteUser(userId);
+      toast.success('Usuário excluído com sucesso!');
+      await loadUsers();
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      toast.error('Erro ao excluir usuário');
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'dev': return 'Desenvolvedor';
-      case 'admin': return 'Administrador';
-      case 'vendedor': return 'Vendedor';
-      default: return role;
+  const handleToggleUserStatus = async (userId: string, ativo: boolean) => {
+    try {
+      await userManagementService.toggleUserStatus(userId, ativo);
+      toast.success(`Usuário ${ativo ? 'ativado' : 'desativado'} com sucesso!`);
+      await loadUsers();
+    } catch (error) {
+      console.error('Erro ao alterar status do usuário:', error);
+      toast.error('Erro ao alterar status do usuário');
     }
   };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingUser(undefined);
+  };
+
+  if (showForm) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">
+              {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
+            </h1>
+          </div>
+          
+          <UserForm
+            user={editingUser}
+            onSave={handleSaveUser}
+            onCancel={handleCancelForm}
+            loading={formLoading}
+          />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Gerenciamento de Usuários</h1>
+          <div className="flex items-center gap-2">
+            <Users className="h-6 w-6" />
+            <h1 className="text-2xl font-bold">Gerenciamento de Usuários</h1>
+          </div>
+          <Button 
+            onClick={handleCreateUser}
+            className="bg-whatsapp hover:bg-whatsapp-dark"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Novo Usuário
+          </Button>
         </div>
-        
-        <div className="grid gap-6">
-          {/* Criar novo convite */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
-                Criar Convite de Cadastro
-              </CardTitle>
-              <CardDescription>
-                Envie um convite por email para que novos usuários possam se cadastrar
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="usuario@exemplo.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="role">Nível de Acesso</Label>
-                  <Select value={formData.role} onValueChange={(value: 'dev' | 'admin' | 'vendedor') => 
-                    setFormData(prev => ({ ...prev, role: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vendedor">Vendedor</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="dev">Desenvolvedor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-end">
-                  <Button 
-                    onClick={createInvite}
-                    disabled={loading}
-                    className="w-full bg-whatsapp hover:bg-whatsapp-dark"
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    Criar Convite
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Lista de convites */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Convites Pendentes</CardTitle>
-              <CardDescription>
-                Gerencie os convites de cadastro enviados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Nível</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead>Expira em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {convites.map((convite) => (
-                    <TableRow key={convite.id}>
-                      <TableCell className="font-medium">{convite.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleBadgeVariant(convite.role)}>
-                          {getRoleLabel(convite.role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={convite.usado ? 'secondary' : 'default'}>
-                          {convite.usado ? 'Usado' : 'Pendente'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(convite.criado_em).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(convite.expira_em).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyInviteLink(convite.token)}
-                            disabled={convite.usado}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteInvite(convite.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              
-              {convites.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  Nenhum convite encontrado
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Usuários do Sistema</CardTitle>
+            <CardDescription>
+              Gerencie todos os usuários, suas permissões e informações pessoais
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Buscar por nome, email, telefone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="text-sm text-gray-500">
+                {filteredUsers.length} usuário(s) encontrado(s)
+              </div>
+            </div>
+
+            <UsersList
+              users={filteredUsers}
+              onEdit={handleEditUser}
+              onDelete={handleDeleteUser}
+              onToggleStatus={handleToggleUserStatus}
+              loading={loading}
+            />
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );
