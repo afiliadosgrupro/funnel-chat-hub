@@ -346,14 +346,12 @@ export const IntegrationTab = ({ userData, loading, setLoading, tabType, title, 
           </>
         );
         
-      default:
-        // For braip, keed, payt - similar structure
-        const prefix = tabType.replace('-', '_');
+      case 'braip':
         return (
           <>
             <FormField
               control={form.control}
-              name={`${prefix}_webhook_url`}
+              name="braip_webhook_url"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>URL do Webhook</FormLabel>
@@ -367,7 +365,7 @@ export const IntegrationTab = ({ userData, loading, setLoading, tabType, title, 
             
             <FormField
               control={form.control}
-              name={`${prefix}_token`}
+              name="braip_token"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Token da API</FormLabel>
@@ -381,7 +379,7 @@ export const IntegrationTab = ({ userData, loading, setLoading, tabType, title, 
             
             <FormField
               control={form.control}
-              name={`${prefix}_ativo`}
+              name="braip_ativo"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
@@ -396,6 +394,107 @@ export const IntegrationTab = ({ userData, loading, setLoading, tabType, title, 
             />
           </>
         );
+        
+      case 'keed':
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="keed_webhook_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL do Webhook</FormLabel>
+                  <FormControl>
+                    <Input placeholder={`URL para receber notificações da ${title}`} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="keed_token"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Token da API</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder={`Token de autenticação da API ${title}`} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="keed_ativo"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">API Ativa</FormLabel>
+                    <FormDescription>Ativa ou desativa a integração com a {title}</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </>
+        );
+        
+      case 'payt':
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="payt_webhook_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL do Webhook</FormLabel>
+                  <FormControl>
+                    <Input placeholder={`URL para receber notificações da ${title}`} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="payt_token"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Token da API</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder={`Token de autenticação da API ${title}`} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="payt_ativo"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">API Ativa</FormLabel>
+                    <FormDescription>Ativa ou desativa a integração com a {title}</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </>
+        );
+        
+      default:
+        return null;
     }
   };
 
