@@ -1,8 +1,11 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, AuthState } from '@/types/auth';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { authService, LoginCredentials } from '@/services/authService';
+import { useInactivityTimer } from '@/hooks/useInactivityTimer';
+import { authStorage } from '@/utils/authStorage';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -27,29 +30,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check for stored authentication on component mount
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('authToken');
-      const userStr = localStorage.getItem('user');
+      const { token, user } = authStorage.getStoredAuth();
       
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr) as User;
-          setState({
-            isAuthenticated: true,
-            user,
-            loading: false,
-            error: null,
-          });
-        } catch (error) {
-          console.error('Falha ao analisar os dados do usuário armazenados', error);
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
-          setState({
-            isAuthenticated: false,
-            user: null,
-            loading: false,
-            error: null,
-          });
-        }
+      if (token && user) {
+        setState({
+          isAuthenticated: true,
+          user,
+          loading: false,
+          error: null,
+        });
       } else {
         setState(prev => ({ ...prev, loading: false }));
       }
@@ -58,108 +47,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, []);
 
-  // Auto logout on inactivity (30 minutes)
-  useEffect(() => {
-    let inactivityTimer: number;
-    
-    const resetTimer = () => {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = window.setTimeout(() => {
-        if (state.isAuthenticated) {
-          logout();
-          alert('Sua sessão expirou devido à inatividade. Por favor, faça login novamente.');
-        }
-      }, 30 * 60 * 1000); // 30 minutes
-    };
-
-    // Reset timer on user activity
-    const handleActivity = () => {
-      resetTimer();
-    };
-
-    if (state.isAuthenticated) {
-      resetTimer();
-      
-      window.addEventListener('mousemove', handleActivity);
-      window.addEventListener('keypress', handleActivity);
-      window.addEventListener('click', handleActivity);
-      window.addEventListener('scroll', handleActivity);
-    }
-
-    return () => {
-      clearTimeout(inactivityTimer);
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('keypress', handleActivity);
-      window.removeEventListener('click', handleActivity);
-      window.removeEventListener('scroll', handleActivity);
-    };
-  }, [state.isAuthenticated]);
+  // Auto logout on inactivity
+  useInactivityTimer({
+    isAuthenticated: state.isAuthenticated,
+    onTimeout: logout
+  });
 
   // Check permissions based on role hierarchy
   const hasPermission = (requiredRole: 'dev' | 'admin' | 'vendedor'): boolean => {
     if (!state.user) return false;
-    
-    const roleHierarchy = {
-      'dev': 3,
-      'admin': 2,
-      'vendedor': 1
-    };
-    
-    return roleHierarchy[state.user.role] >= roleHierarchy[requiredRole];
+    return authService.hasPermission(state.user.role, requiredRole);
   };
 
   // Login function using sistema_usuarios table
   const login = async (email: string, password: string) => {
-    try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+    setState(prev => ({ ...prev, loading: true, error: null }));
 
-      console.log('Tentando login com:', email);
+    const credentials: LoginCredentials = { email, password };
+    const result = await authService.login(credentials);
 
-      // Consultar a tabela sistema_usuarios para verificar credenciais
-      const { data, error } = await supabase
-        .from('sistema_usuarios')
-        .select('*')
-        .eq('email', email.toLowerCase().trim())
-        .eq('ativo', true)
-        .single();
+    if (result.error) {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: result.error!,
+      }));
+      return;
+    }
 
-      console.log('Resultado da consulta:', { data, error });
-
-      if (error || !data) {
-        console.error('Erro na consulta ou usuário não encontrado:', error);
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'Credenciais inválidas ou usuário inativo.',
-        }));
-        return;
-      }
-
-      // Verificar senha simples (para teste)
-      if (data.senha_hash !== password) {
-        console.log('Senha incorreta. Esperado:', data.senha_hash, 'Recebido:', password);
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'Credenciais inválidas.',
-        }));
-        return;
-      }
-
-      const user: User = {
-        id: data.id,
-        email: data.email,
-        name: data.nome,
-        role: data.role as 'dev' | 'admin' | 'vendedor',
-        avatar: undefined,
-      };
-      
-      localStorage.setItem('authToken', 'sistema-usuarios-token');
-      localStorage.setItem('user', JSON.stringify(user));
+    if (result.user) {
+      authStorage.storeAuth(result.user);
       
       setState({
         isAuthenticated: true,
-        user,
+        user: result.user,
         loading: false,
         error: null,
       });
@@ -167,22 +88,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate('/dashboard');
       toast({
         title: "Login bem-sucedido",
-        description: `Bem-vindo, ${user.name}!`,
+        description: `Bem-vindo, ${result.user.name}!`,
       });
-      
-    } catch (error) {
-      console.error('Erro no login:', error);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Ocorreu um erro durante o login. Tente novamente.',
-      }));
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    authStorage.clearAuth();
     
     setState({
       isAuthenticated: false,
@@ -195,62 +107,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const forgotPassword = async (email: string) => {
-    try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      const { data, error } = await supabase
-        .from('sistema_usuarios')
-        .select('email')
-        .eq('email', email.toLowerCase().trim())
-        .single();
-        
-      if (error || !data) {
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'Email não encontrado em nosso sistema.',
-        }));
-        return;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setState(prev => ({ ...prev, loading: false }));
-      toast({
-        title: "Email enviado",
-        description: "Instruções de recuperação de senha foram enviadas para seu email.",
-      });
-    } catch (error) {
-      console.error('Erro ao recuperar senha:', error);
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    const result = await authService.forgotPassword(email);
+    
+    if (result.error) {
       setState(prev => ({
         ...prev,
         loading: false,
-        error: 'Ocorreu um erro ao processar sua solicitação. Tente novamente.',
+        error: result.error!,
       }));
+      return;
     }
+    
+    setState(prev => ({ ...prev, loading: false }));
+    toast({
+      title: "Email enviado",
+      description: "Instruções de recuperação de senha foram enviadas para seu email.",
+    });
   };
 
   const resetPassword = async (token: string, newPassword: string) => {
-    try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setState(prev => ({ ...prev, loading: false }));
-      toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi redefinida com sucesso. Você já pode fazer login.",
-      });
-      
-      navigate('/login');
-    } catch (error) {
-      console.error('Erro ao redefinir senha:', error);
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    const result = await authService.resetPassword(token, newPassword);
+    
+    if (result.error) {
       setState(prev => ({
         ...prev,
         loading: false,
-        error: 'Ocorreu um erro ao redefinir sua senha. Tente novamente.',
+        error: result.error!,
       }));
+      return;
     }
+    
+    setState(prev => ({ ...prev, loading: false }));
+    toast({
+      title: "Senha atualizada",
+      description: "Sua senha foi redefinida com sucesso. Você já pode fazer login.",
+    });
+    
+    navigate('/login');
   };
 
   const contextValue = {
