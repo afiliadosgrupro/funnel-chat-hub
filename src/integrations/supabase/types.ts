@@ -113,10 +113,12 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string | null
+          fonte_conversa: string | null
           id: string
           is_read: boolean | null
           message_type: string | null
           metadata: Json | null
+          produto_id: string | null
           sender_id: string | null
           sender_name: string | null
           sender_type: string
@@ -127,10 +129,12 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string | null
+          fonte_conversa?: string | null
           id?: string
           is_read?: boolean | null
           message_type?: string | null
           metadata?: Json | null
+          produto_id?: string | null
           sender_id?: string | null
           sender_name?: string | null
           sender_type: string
@@ -141,17 +145,96 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string | null
+          fonte_conversa?: string | null
           id?: string
           is_read?: boolean | null
           message_type?: string | null
           metadata?: Json | null
+          produto_id?: string | null
           sender_id?: string | null
           sender_name?: string | null
           sender_type?: string
           updated_at?: string | null
           vendedor_user?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversas_sistema: {
+        Row: {
+          atualizado_em: string | null
+          automacao_pausada: boolean | null
+          criado_em: string | null
+          email_lead: string | null
+          fonte_lead: string | null
+          funil_etapa: string | null
+          id: string
+          lead_id: string
+          metadados: Json | null
+          nome_lead: string | null
+          produto_id: string | null
+          status: string | null
+          telefone_lead: string | null
+          ultima_interacao: string | null
+          vendedor_id: string | null
+        }
+        Insert: {
+          atualizado_em?: string | null
+          automacao_pausada?: boolean | null
+          criado_em?: string | null
+          email_lead?: string | null
+          fonte_lead?: string | null
+          funil_etapa?: string | null
+          id?: string
+          lead_id: string
+          metadados?: Json | null
+          nome_lead?: string | null
+          produto_id?: string | null
+          status?: string | null
+          telefone_lead?: string | null
+          ultima_interacao?: string | null
+          vendedor_id?: string | null
+        }
+        Update: {
+          atualizado_em?: string | null
+          automacao_pausada?: boolean | null
+          criado_em?: string | null
+          email_lead?: string | null
+          fonte_lead?: string | null
+          funil_etapa?: string | null
+          id?: string
+          lead_id?: string
+          metadados?: Json | null
+          nome_lead?: string | null
+          produto_id?: string | null
+          status?: string | null
+          telefone_lead?: string | null
+          ultima_interacao?: string | null
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversas_sistema_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversas_sistema_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "sistema_usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations: {
         Row: {
@@ -1023,6 +1106,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      produtos: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string | null
+          criado_em: string | null
+          descricao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
       }
       "Quebra de Objeção": {
         Row: {
