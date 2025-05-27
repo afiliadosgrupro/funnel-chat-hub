@@ -10,15 +10,17 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ConversationManagement from '@/pages/ConversationManagement';
+import Index from './pages/Index';
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
           <Routes>
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route 
               path="/dashboard" 
@@ -54,9 +56,9 @@ function App() {
             />
           </Routes>
           <Toaster />
-        </Router>
-      </QueryClientProvider>
-    </AuthProvider>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 }
 

@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { User, AuthState } from '@/types/auth';
 import { toast } from '@/hooks/use-toast';
 import { authService, LoginCredentials } from '@/services/authService';
@@ -24,8 +23,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading: true,
     error: null,
   });
-  
-  const navigate = useNavigate();
 
   // Define logout function early to avoid hoisting issues
   const logout = () => {
@@ -38,7 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       error: null,
     });
     
-    navigate('/login');
+    // Use window.location instead of useNavigate
+    window.location.href = '/login';
   };
 
   // Check for stored authentication on component mount
@@ -99,7 +97,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error: null,
       });
       
-      navigate('/dashboard');
+      // Use window.location instead of useNavigate
+      window.location.href = '/dashboard';
       toast({
         title: "Login bem-sucedido",
         description: `Bem-vindo, ${result.user.name}!`,
@@ -148,7 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description: "Sua senha foi redefinida com sucesso. Você já pode fazer login.",
     });
     
-    navigate('/login');
+    // Use window.location instead of useNavigate
+    window.location.href = '/login';
   };
 
   const contextValue = {
