@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,10 +69,10 @@ const FunnelOverview = () => {
   useEffect(() => {
     fetchConversations();
     
-    // Configurar atualização automática a cada 10 segundos
+    // Configurar atualização automática a cada 2 minutos (120 segundos)
     intervalRef.current = setInterval(() => {
       fetchConversations();
-    }, 10000);
+    }, 120000);
     
     // Cleanup do interval quando o componente for desmontado
     return () => {
@@ -331,7 +332,7 @@ const FunnelOverview = () => {
             {filteredConversations.length} conversas
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Atualiza a cada 10s</span>
+            <span className="text-xs text-muted-foreground">Atualiza a cada 2 min</span>
             <button 
               onClick={handleManualRefresh} 
               className="text-gray-400 hover:text-gray-600 transition-colors"

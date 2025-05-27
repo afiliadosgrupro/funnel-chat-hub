@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useLeads } from '@/contexts/LeadContext';
 import { Button } from '@/components/ui/button';
@@ -108,7 +109,7 @@ const ChatInterface = () => {
           </div>
           <div className="flex gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs opacity-75">Atualiza a cada 30s</span>
+              <span className="text-xs opacity-75">Atualiza a cada 2 min</span>
               <button 
                 onClick={handleManualRefresh} 
                 className="text-white hover:bg-whatsapp-dark transition-colors p-1 rounded"

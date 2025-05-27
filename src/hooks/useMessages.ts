@@ -39,11 +39,11 @@ export const useMessages = (selectedLeadId: string | null, selectedLead: any) =>
     if (selectedLeadId) {
       loadMessages();
       
-      // Configurar atualização automática a cada 30 segundos
+      // Configurar atualização automática a cada 2 minutos (120 segundos)
       intervalRef.current = setInterval(() => {
         console.log('Atualizando mensagens automaticamente...');
         loadMessages();
-      }, 30000);
+      }, 120000);
     } else {
       setMessages([]);
     }
