@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, AuthState } from '@/types/auth';
@@ -114,6 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
+      console.log('Tentando login com:', email);
+
       // Consultar a tabela sistema_usuarios para verificar credenciais
       const { data, error } = await supabase
         .from('sistema_usuarios')
@@ -122,7 +123,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('ativo', true)
         .single();
 
+      console.log('Resultado da consulta:', { data, error });
+
       if (error || !data) {
+        console.error('Erro na consulta ou usuário não encontrado:', error);
         setState(prev => ({
           ...prev,
           loading: false,
@@ -131,8 +135,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // TODO: Implementar verificação de senha hash aqui
-      // Por enquanto, qualquer senha será aceita para desenvolvimento
+      // Verificar senha simples (para teste)
+      if (data.senha_hash !== password) {
+        console.log('Senha incorreta. Esperado:', data.senha_hash, 'Recebido:', password);
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Credenciais inválidas.',
+        }));
+        return;
+      }
 
       const user: User = {
         id: data.id,
