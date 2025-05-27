@@ -225,16 +225,14 @@ const Settings = () => {
             
             const { data: newUserData, error: insertError } = await supabase
               .from('SAAS_usuarios')
-              .insert([
-                {
-                  email: user.email,
-                  nome_usuario: user.name || 'Usuário',
-                  senha_hash: 'temp123', // senha temporária
-                  tipo_usuario: 'vendedor',
-                  ativo: true,
-                  produto_principal: 'cha_rmgi'
-                }
-              ])
+              .insert({
+                email: user.email,
+                nome_usuario: user.name || 'Usuário',
+                senha_hash: 'temp123', // senha temporária
+                tipo_usuario: 'vendedor',
+                ativo: true,
+                produto_principal: 'cha_rmgi'
+              })
               .select()
               .single();
 
@@ -339,16 +337,14 @@ const Settings = () => {
           // Criar usuário se não existir
           const { data: newUserData, error: insertError } = await supabase
             .from('SAAS_usuarios')
-            .insert([
-              {
-                email: user.email,
-                nome_usuario: user.name || 'Usuário',
-                senha_hash: 'temp123',
-                tipo_usuario: 'vendedor',
-                ativo: true,
-                produto_principal: 'cha_rmgi'
-              }
-            ])
+            .insert({
+              email: user.email,
+              nome_usuario: user.name || 'Usuário',
+              senha_hash: 'temp123',
+              tipo_usuario: 'vendedor',
+              ativo: true,
+              produto_principal: 'cha_rmgi'
+            })
             .select()
             .single();
 
