@@ -8,7 +8,7 @@ import { Search, Filter, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SaasUser {
-  id: string;
+  id: number;
   nome_usuario: string;
   email: string;
 }
@@ -109,10 +109,9 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Vendedor" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os vendedores</SelectItem>
             <SelectItem value="unassigned">Não atribuído</SelectItem>
             {saasUsers.map(user => (
-              <SelectItem key={user.id} value={user.id}>
+              <SelectItem key={user.id} value={user.id.toString()}>
                 {user.nome_usuario}
               </SelectItem>
             ))}
@@ -125,7 +124,6 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Produto" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os produtos</SelectItem>
             <SelectItem value="none">Sem produto</SelectItem>
             {products.map(product => (
               <SelectItem key={product.id} value={product.id}>
@@ -141,7 +139,6 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Etapa do funil" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as etapas</SelectItem>
             <SelectItem value="inicial">Inicial</SelectItem>
             <SelectItem value="identification">Identificação</SelectItem>
             <SelectItem value="awareness">Conscientização</SelectItem>
@@ -158,7 +155,6 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
             <SelectItem value="ativo">Ativo</SelectItem>
             <SelectItem value="pausado">Pausado</SelectItem>
             <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -171,7 +167,6 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Fonte" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as fontes</SelectItem>
             <SelectItem value="março">Março</SelectItem>
             <SelectItem value="keed">Keed</SelectItem>
             <SelectItem value="braip">Braip</SelectItem>

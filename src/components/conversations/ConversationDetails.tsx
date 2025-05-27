@@ -40,7 +40,7 @@ interface Message {
 }
 
 interface SaasUser {
-  id: string;
+  id: number;
   nome_usuario: string;
   email: string;
 }
@@ -235,7 +235,7 @@ const ConversationDetails = ({ conversationId }: ConversationDetailsProps) => {
                   <SelectContent>
                     <SelectItem value="unassigned">Não atribuído</SelectItem>
                     {saasUsers.map(user => (
-                      <SelectItem key={user.id} value={user.id}>
+                      <SelectItem key={user.id} value={user.id.toString()}>
                         {user.nome_usuario}
                       </SelectItem>
                     ))}
