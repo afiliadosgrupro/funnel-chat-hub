@@ -39,10 +39,26 @@ interface Message {
   message_type: string;
 }
 
+interface SaasUser {
+  id: string;
+  nome_usuario: string;
+  email: string;
+}
+
+const stageBadgeColors = {
+  'inicial': 'bg-gray-500',
+  'identification': 'bg-blue-500',
+  'awareness': 'bg-purple-500',
+  'validation': 'bg-pink-500',
+  'negotiation': 'bg-amber-500',
+  'objection': 'bg-red-500',
+  'purchase': 'bg-emerald-500',
+};
+
 const ConversationDetails = ({ conversationId }: ConversationDetailsProps) => {
   const [conversation, setConversation] = useState<ConversationData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [saasUsers, setSaasUsers] = useState<SaasUser[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -84,14 +100,14 @@ const ConversationDetails = ({ conversationId }: ConversationDetailsProps) => {
 
   const fetchSelectOptions = async () => {
     try {
-      // Buscar vendedores
-      const { data: vendorsData } = await supabase
-        .from('sistema_usuarios')
-        .select('id, nome, email')
+      // Buscar usuários do SAAS (vendedores)
+      const { data: saasData } = await supabase
+        .from('SAAS_usuarios')
+        .select('id, nome_usuario, email')
         .eq('ativo', true)
-        .order('nome');
+        .order('nome_usuario');
 
-      setVendors(vendorsData || []);
+      setSaasUsers(saasData || []);
 
       // Buscar produtos
       const { data: productsData } = await supabase
@@ -210,17 +226,17 @@ const ConversationDetails = ({ conversationId }: ConversationDetailsProps) => {
               <div>
                 <label className="text-sm font-medium">Vendedor Responsável</label>
                 <Select
-                  value={conversation.vendedor?.id || ''}
-                  onValueChange={(value) => updateConversation('vendedor_id', value)}
+                  value={conversation.vendedor?.id || 'unassigned'}
+                  onValueChange={(value) => updateConversation('vendedor_id', value === 'unassigned' ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar vendedor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Não atribuído</SelectItem>
-                    {vendors.map(vendor => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.nome}
+                    <SelectItem value="unassigned">Não atribuído</SelectItem>
+                    {saasUsers.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.nome_usuario}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -230,13 +246,14 @@ const ConversationDetails = ({ conversationId }: ConversationDetailsProps) => {
               <div>
                 <label className="text-sm font-medium">Produto</label>
                 <Select
-                  value={conversation.produto?.id || ''}
-                  onValueChange={(value) => updateConversation('produto_id', value)}
+                  value={conversation.produto?.id || 'none'}
+                  onValueChange={(value) => updateConversation('produto_id', value === 'none' ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar produto" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Nenhum produto</SelectItem>
                     {products.map(product => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.nome}
@@ -292,6 +309,20 @@ const ConversationDetails = ({ conversationId }: ConversationDetailsProps) => {
                 <div><strong>Fonte:</strong> {conversation.fonte_lead}</div>
                 <div><strong>Criado em:</strong> {new Date(conversation.criado_em).toLocaleString('pt-BR')}</div>
                 <div><strong>Última interação:</strong> {new Date(conversation.ultima_interacao).toLocaleString('pt-BR')}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium">Vendedor Atribuído</h4>
+              <div className="text-sm">
+                {conversation.vendedor ? (
+                  <div>
+                    <strong>Nome:</strong> {conversation.vendedor.nome}<br/>
+                    <strong>Email:</strong> {conversation.vendedor.email}
+                  </div>
+                ) : (
+                  <span className="text-gray-500">Nenhum vendedor atribuído</span>
+                )}
               </div>
             </div>
           </TabsContent>

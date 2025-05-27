@@ -1,10 +1,22 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Search, Filter, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SaasUser {
+  id: string;
+  nome_usuario: string;
+  email: string;
+}
+
+interface Product {
+  id: string;
+  nome: string;
+}
 
 const ConversationFilters = () => {
   const [filters, setFilters] = useState({
@@ -15,6 +27,37 @@ const ConversationFilters = () => {
     status: '',
     source: ''
   });
+  
+  const [saasUsers, setSaasUsers] = useState<SaasUser[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, []);
+
+  const fetchFilterOptions = async () => {
+    try {
+      // Buscar usuários SAAS (vendedores)
+      const { data: usersData } = await supabase
+        .from('SAAS_usuarios')
+        .select('id, nome_usuario, email')
+        .eq('ativo', true)
+        .order('nome_usuario');
+
+      setSaasUsers(usersData || []);
+
+      // Buscar produtos
+      const { data: productsData } = await supabase
+        .from('produtos')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      setProducts(productsData || []);
+    } catch (error) {
+      console.error('Erro ao carregar opções de filtro:', error);
+    }
+  };
 
   const clearFilters = () => {
     setFilters({
@@ -66,9 +109,13 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Vendedor" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os vendedores</SelectItem>
+            <SelectItem value="all">Todos os vendedores</SelectItem>
             <SelectItem value="unassigned">Não atribuído</SelectItem>
-            {/* Aqui você pode adicionar vendedores dinamicamente */}
+            {saasUsers.map(user => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.nome_usuario}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -78,10 +125,13 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Produto" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os produtos</SelectItem>
-            <SelectItem value="cha-rmgi">Chá RMGI</SelectItem>
-            <SelectItem value="keed">Produto Keed</SelectItem>
-            <SelectItem value="braip">Produto Braip</SelectItem>
+            <SelectItem value="all">Todos os produtos</SelectItem>
+            <SelectItem value="none">Sem produto</SelectItem>
+            {products.map(product => (
+              <SelectItem key={product.id} value={product.id}>
+                {product.nome}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -91,7 +141,7 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Etapa do funil" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas as etapas</SelectItem>
+            <SelectItem value="all">Todas as etapas</SelectItem>
             <SelectItem value="inicial">Inicial</SelectItem>
             <SelectItem value="identification">Identificação</SelectItem>
             <SelectItem value="awareness">Conscientização</SelectItem>
@@ -108,7 +158,7 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os status</SelectItem>
+            <SelectItem value="all">Todos os status</SelectItem>
             <SelectItem value="ativo">Ativo</SelectItem>
             <SelectItem value="pausado">Pausado</SelectItem>
             <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -121,7 +171,7 @@ const ConversationFilters = () => {
             <SelectValue placeholder="Fonte" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas as fontes</SelectItem>
+            <SelectItem value="all">Todas as fontes</SelectItem>
             <SelectItem value="março">Março</SelectItem>
             <SelectItem value="keed">Keed</SelectItem>
             <SelectItem value="braip">Braip</SelectItem>
