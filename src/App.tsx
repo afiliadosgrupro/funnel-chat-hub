@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -7,14 +8,15 @@ import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
-import { QueryClient } from 'react-query';
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ConversationManagement from '@/pages/ConversationManagement';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
     <AuthProvider>
-      <QueryClient>
+      <QueryClientProvider client={queryClient}>
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -53,7 +55,7 @@ function App() {
           </Routes>
           <Toaster />
         </Router>
-      </QueryClient>
+      </QueryClientProvider>
     </AuthProvider>
   );
 }
