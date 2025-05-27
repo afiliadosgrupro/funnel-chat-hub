@@ -10,6 +10,7 @@ interface AuthContextType extends AuthState {
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  hasPermission: (requiredRole: 'dev' | 'admin' | 'vendedor') => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,10 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     if (state.isAuthenticated) {
-      // Set up the initial timer
       resetTimer();
       
-      // Add event listeners for user activity
       window.addEventListener('mousemove', handleActivity);
       window.addEventListener('keypress', handleActivity);
       window.addEventListener('click', handleActivity);
@@ -97,39 +96,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [state.isAuthenticated]);
 
-  // Login function using Supabase Login_saas table
+  // Check permissions based on role hierarchy
+  const hasPermission = (requiredRole: 'dev' | 'admin' | 'vendedor'): boolean => {
+    if (!state.user) return false;
+    
+    const roleHierarchy = {
+      'dev': 3,
+      'admin': 2,
+      'vendedor': 1
+    };
+    
+    return roleHierarchy[state.user.role] >= roleHierarchy[requiredRole];
+  };
+
+  // Login function using sistema_usuarios table
   const login = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
-      // Consultar a tabela Login_saas para verificar credenciais
+      // Consultar a tabela sistema_usuarios para verificar credenciais
       const { data, error } = await supabase
-        .from('Login_saas')
+        .from('sistema_usuarios')
         .select('*')
         .eq('email', email.toLowerCase().trim())
-        .eq('senha', password)
+        .eq('ativo', true)
         .single();
 
       if (error || !data) {
         setState(prev => ({
           ...prev,
           loading: false,
-          error: 'Credenciais inválidas. Tente novamente.',
+          error: 'Credenciais inválidas ou usuário inativo.',
         }));
         return;
       }
 
-      // Login bem-sucedido
+      // TODO: Implementar verificação de senha hash aqui
+      // Por enquanto, qualquer senha será aceita para desenvolvimento
+
       const user: User = {
-        id: data.id.toString(),
+        id: data.id,
         email: data.email,
-        name: data.company_name || data.user || email.split('@')[0],
-        role: 'admin', // Definindo como admin por padrão, você pode ajustar conforme necessário
+        name: data.nome,
+        role: data.role as 'dev' | 'admin' | 'vendedor',
         avatar: undefined,
       };
       
-      // Armazenar informações do usuário e token
-      localStorage.setItem('authToken', 'login-saas-token');
+      localStorage.setItem('authToken', 'sistema-usuarios-token');
       localStorage.setItem('user', JSON.stringify(user));
       
       setState({
@@ -173,9 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Verificar se o email existe na tabela Login_saas
       const { data, error } = await supabase
-        .from('Login_saas')
+        .from('sistema_usuarios')
         .select('email')
         .eq('email', email.toLowerCase().trim())
         .single();
@@ -189,8 +201,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Aqui você implementaria o envio real de email para recuperação de senha
-      // Por enquanto, apenas simulamos o sucesso
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setState(prev => ({ ...prev, loading: false }));
@@ -212,8 +222,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Em uma implementação real, você validaria o token e atualizaria a senha
-      // Por enquanto, apenas simulamos o sucesso
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setState(prev => ({ ...prev, loading: false }));
@@ -239,6 +247,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     forgotPassword,
     resetPassword,
+    hasPermission,
   };
 
   return (

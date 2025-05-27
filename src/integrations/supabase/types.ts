@@ -292,6 +292,47 @@ export type Database = {
           },
         ]
       }
+      convites_cadastro: {
+        Row: {
+          criado_em: string | null
+          criado_por: string
+          email: string
+          expira_em: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          token: string
+          usado: boolean | null
+        }
+        Insert: {
+          criado_em?: string | null
+          criado_por: string
+          email: string
+          expira_em: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          token: string
+          usado?: boolean | null
+        }
+        Update: {
+          criado_em?: string | null
+          criado_por?: string
+          email?: string
+          expira_em?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          token?: string
+          usado?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_cadastro_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "sistema_usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       "exemplos de quebras de objeções": {
         Row: {
           CONTEXTO: string | null
@@ -1278,6 +1319,50 @@ export type Database = {
           whatsapp_webhook_url?: string | null
         }
         Relationships: []
+      }
+      sistema_usuarios: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string | null
+          criado_em: string | null
+          criado_por: string | null
+          email: string
+          id: string
+          nome: string
+          role: Database["public"]["Enums"]["user_role"]
+          senha_hash: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          criado_em?: string | null
+          criado_por?: string | null
+          email: string
+          id?: string
+          nome: string
+          role?: Database["public"]["Enums"]["user_role"]
+          senha_hash: string
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          criado_em?: string | null
+          criado_por?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          senha_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sistema_usuarios_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "sistema_usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       TESTE: {
         Row: {
@@ -2640,7 +2725,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "dev" | "admin" | "vendedor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2755,6 +2840,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["dev", "admin", "vendedor"],
+    },
   },
 } as const
